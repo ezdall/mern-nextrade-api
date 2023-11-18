@@ -6,10 +6,12 @@ const errorHandler = (error, req, res, next) => {
 
   if (error.reason) {
     console.error('| ==-- Error-Reason --== |:', errorReason);
+  } else if(error.isAxiosError){
+    console.log(error.response.data)
+  } else{
+      // console.error('| ==--- MyErrorStack ---== |:', error.stack);
+    console.log({ error });
   }
-
-  // console.error('| ==--- MyErrorStack ---== |:', error.stack);
-  console.log({ error });
 
   // sent to default express errorHandler
   // can trigger if two res. ex. res.render() and res.json()
@@ -22,6 +24,14 @@ const errorHandler = (error, req, res, next) => {
   if (req.xhr) {
     console.log('* * * xhr!!!');
     return res.status(500).json({ error: 'Something failed - xhr jquery' });
+  }
+
+  if(error.isAxiosError){
+    const {data, status, statusText} = error.response
+    return res.status(status).json({
+      error: `${status} ${statusText} : ${data.error}`,
+      inner: data.error_description
+    })
   }
 
   // jwt-express's authentication error-handling

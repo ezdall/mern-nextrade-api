@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 const _ = require('lodash');
 const { genSalt, hash } = require('bcrypt');
+const axios = require('axios')
+const stripe = require('stripe')
+
+const myStripe = stripe(process.env.STRIPE_SECRET_KEY)
 
 // model
 const User = require('../models/user.model');
@@ -116,22 +120,106 @@ const isSeller = (req, res, next) => {
   const { seller, name } = req.profile;
   const wasSeller = seller && typeof seller === 'boolean';
 
-  if (!wasSeller)
-    return next(new Forbidden403(`${name} is not a seller @isSeller`));
+  if (!wasSeller) return next(new Forbidden403(`${name} is not a seller @isSeller`));
 
   return next();
 };
 
-const stripeCustomer = (req, res, next) => {
-  console.log('stripeCustomer');
+// https://connect.stripe.com/express/oauth/authorize
+// https://connect.stripe.com/express/oauth/token
 
-  next();
+const stripeAuth = async (req, res, next) => {
+  try{
+     const {stripe} = req.body
+
+     if(!stripe) return next(new NotFound404('no stripe'))
+
+    const response = await axios.post("https://connect.stripe.com/oauth/token", {
+      client_secret: process.env.STRIPE_SECRET_KEY,
+      code: stripe, 
+      grant_type: 'authorization_code'
+    })
+
+    // console.log({resp:response.data})
+
+    if(!response) return next(new BadRequest400('stripe auth error'))
+
+    // mount
+    // req.body.stripeSeller=response.data
+    req.body.stripe_seller = response.data
+
+    return next()
+  } catch(err){
+    return next(err)
+  }
+}
+
+const stripeCustomer = (req, res, next) => {
+  // console.log('stripeCustomer');
+
+  // console.log({ stripe: req.profile })
+
+  if(req.profile.stripe_customer){
+      //update stripe customer
+      myStripe.customers.update(req.profile.stripe_customer, {
+          source: req.body.token
+      }, (err, customer) => {
+        if(err){
+          return next(new BadRequest400('Could not update charge details'))
+        }
+
+        req.body.order.payment_id = customer.id
+        next()
+      })
+  } else {
+    // create new
+      myStripe.customers.create({
+            email: req.profile.email,
+            source: req.body.token
+        })
+      .then(async customer => {
+         try{
+            const result = await User.updateOne({_id:req.profile._id}, {$set: { stripe_customer: customer.id }})
+
+            if(!result){
+                return next(new BadRequest400('error at update customer'))
+            }
+
+            // mount
+            req.body.order.payment_id = customer.id
+
+          return next()
+        } catch (err){
+          return next(err)
+        } 
+      })
+  }
 };
+
 
 const createCharge = (req, res, next) => {
   console.log('createCharge');
 
-  next();
+  if(!req.profile.stripe_seller){
+    return next(new BadRequest400("Please connect your Stripe account"))
+  }
+
+  myStripe.tokens.create({
+    customer: req.order.payment_id,
+  }, {
+    stripeAccount: req.profile.stripe_seller.stripe_user_id,
+  })
+  .then((token) => {
+      myStripe.charges.create({
+        amount: req.body.amount * 100, //amount in cents
+        currency: "usd",
+        source: token.id,
+      }, {
+        stripeAccount: req.profile.stripe_seller.stripe_user_id,
+      }).then((charge) => {
+        next()
+      })
+  })
 };
 
 module.exports = {
@@ -142,5 +230,6 @@ module.exports = {
   userById,
   isSeller,
   stripeCustomer,
+  stripeAuth,
   createCharge
 };

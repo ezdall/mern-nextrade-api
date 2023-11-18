@@ -265,14 +265,42 @@ const defaultPhoto = (req, res, next) => {
 };
 
 const decreaseQuantity = async (req, res, next) => {
-  console.log('dec');
+  try{
+  // multi-updateOne
+  // console.log('dec');
 
-  next();
+  const bulkOps = req.body.order.products.map(item => {
+    return {
+      updateOne:{
+        filter: { _id: item.product._id },
+        update: { $inc: { quantity: -item.quantity } }
+      }
+    }
+  })
+
+    const result = await Product.bulkWrite(bulkOps, {})
+
+    if(!result){
+      console.log({result})
+      return next(new BadRequest400('invalid update prod-decrease'))
+    }
+    return next();
+  } catch (err){
+    return next(err)
+  }
+
+  
 };
 const increaseQuantity = async (req, res, next) => {
-  console.log('inc');
-
-  next();
+  try {
+    await Product
+      .findByIdAndUpdate(req.product._id, { $inc: { quantity: req.body.quantity}}, {new: true})
+      .exec()
+      
+      next()
+  } catch (err){
+    return next(err)
+  }
 };
 
 module.exports = {

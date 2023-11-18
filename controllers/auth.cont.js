@@ -160,20 +160,12 @@ const requireLogin = expressJwt({
 	requestProperty: 'auth'
 })
 
-// temp
-// const requireLogin = (req, res, next) => {
-//   console.log('-requireLogin-');
-//   return next();
-// };
-
-
 // for authorization
 const hasAuth = (req, res, next) => {
     // req.profile._id is ObjectId(mongoose-id)
     //  req.auth._id is String
 
     console.log('hasAuth')
-    // console.log({...req.auth})
 
     const authorized =
       req.profile &&

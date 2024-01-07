@@ -4,12 +4,25 @@ const errorHandler = (error, req, res, next) => {
   // .toString() to remove unnecessary error stack
   const errorReason = error.reason && error.reason.toString();
 
+  // for stripe
+  const stripeErrTypes = {
+    invalid_request_error: 'invalid_request_error',
+    api_error: 'api_error',
+    card_error: 'card_error',
+    idempotency_error: 'idempotency_error'
+  };
+
   if (error.reason) {
     console.error('| ==-- Error-Reason --== |:', errorReason);
-  } else if(error.isAxiosError){
-    console.log(error.response.data)
-  } else{
-      // console.error('| ==--- MyErrorStack ---== |:', error.stack);
+  } else if (error.isAxiosError) {
+    console.log('axios error @errHand');
+    console.log(error.response.data);
+  }
+  // for stripe
+  else if (stripeErrTypes[error.rawType]) {
+    console.log('stripe error @errHand');
+  } else {
+    // console.error('| ==--- MyErrorStack ---== |:', error.stack);
     console.log({ error });
   }
 
@@ -26,12 +39,24 @@ const errorHandler = (error, req, res, next) => {
     return res.status(500).json({ error: 'Something failed - xhr jquery' });
   }
 
-  if(error.isAxiosError){
-    const {data, status, statusText} = error.response
+  // stripe
+  if (stripeErrTypes[error.rawType]) {
     return res.status(status).json({
-      error: `${status} ${statusText} : ${data.error}`,
+      error: `${status} : ${error.code}`,
+      message: error.message
+    });
+  }
+
+  // axios handler
+  if (error.isAxiosError) {
+    const { data, status: status2, statusText } = error.response;
+
+    // console.log({  });
+
+    return res.status(status2).json({
+      error: `${status2} ${statusText} : ${data.error_description} - ${data.error}`,
       inner: data.error_description
-    })
+    });
   }
 
   // jwt-express's authentication error-handling
@@ -85,6 +110,8 @@ const errorHandler = (error, req, res, next) => {
     // console.log(getUniqueErrorMessage(error))
     return res.status(409).json({ error: `${uniqueVal} already exist` });
   }
+
+  console.log({ status, error });
 
   return res
     .status(status)

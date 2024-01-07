@@ -9,8 +9,9 @@ const cors = require('cors');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
-const helmet = require('helmet')
+const helmet = require('helmet');
 
+// const { port } = require('./config/config')
 const { connectMDB } = require('./config/db');
 const { corsOptions } = require('./config/cors-options');
 const { errorHandler } = require('./helpers/error-handler');
@@ -34,7 +35,7 @@ app.use(morgan('dev'));
 app.use(express.json()); // parse req.body
 app.use(cookieParser()); // parse req.cookies
 app.use(express.urlencoded({ extended: true }));
-app.use(helmet())
+app.use(helmet());
 
 app.use('/dist', express.static(path.join(__dirname, 'dist')));
 
@@ -62,7 +63,7 @@ mongoose.connection.once('open', () => {
 });
 
 mongoose.connection.on('error', err => {
-  console.error('error @mongoo-conn-error ---', err);
+  console.error('error @mongo-conn-error ---', err);
 });
 
 module.exports = app;

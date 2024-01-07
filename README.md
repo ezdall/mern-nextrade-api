@@ -1,4 +1,4 @@
-# MERN Marketplace - 
+# MERN NexTrade -
 
 - nodejs v14
 - express

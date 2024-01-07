@@ -15,7 +15,7 @@ async function connectMDB() {
       `MongoDB Connected: ${host}:${port}/${name} pid:${process.pid}`
     );
   } catch (error) {
-    console.error(`Error-at-Connection: ${error.stack}`);
+    console.error(`Error-at-Connect: ${error.stack}`);
     process.exit(0); // exit 0-to clean exit, 1- app crash
   }
 }

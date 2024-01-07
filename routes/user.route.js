@@ -1,6 +1,6 @@
 const router = require('express').Router();
 
-const { requireLogin, hasAuth, hdrChk } = require('../controllers/auth.cont');
+const { requireLogin, hasAuth } = require('../controllers/auth.cont');
 const {
   list,
   read,
@@ -14,12 +14,13 @@ router.route('/users').get(list);
 
 router
   .route('/users/:userId')
-  .get(hdrChk, requireLogin, read)
+  .get(requireLogin, read)
   .patch(requireLogin, hasAuth, update)
   .delete(requireLogin, hasAuth, remove);
 
-router.route('/stripe-auth/:userId')
-.patch(requireLogin, hasAuth, stripeAuth, update)
+router
+  .route('/stripe-auth/:userId')
+  .patch(requireLogin, hasAuth, stripeAuth, update);
 
 router.param('userId', userById);
 

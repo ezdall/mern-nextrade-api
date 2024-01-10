@@ -2,14 +2,14 @@ const jwt = require('jsonwebtoken');
 const expressJwt = require('express-jwt');
 const { compare, hash, genSalt } = require('bcrypt');
 
-// model
+//
 const User = require('../models/user.model');
 
 // helper
 const { BadRequest400 } = require('../helpers/bad-request.error');
 const { Unauthorized401 } = require('../helpers/unauthorized.error');
 const { NotFound404 } = require('../helpers/not-found.error');
-const { Forbidden403 } = require('../helpers/forbidden.error')
+const { Forbidden403 } = require('../helpers/forbidden.error');
 
 /**
  * @desc Register
@@ -30,11 +30,7 @@ const register = async (req, res, next) => {
       return next(new BadRequest400('valid fields are required @register'));
     }
 
-    // if(password?.length < 6){
-    //   return next(new BadRequest400('password must be at least 5 char @register'))
-    // }
-
-    // async-hash
+    // async hash
     const salt = await genSalt();
     const hashPass = await hash(password, salt);
 
@@ -44,9 +40,7 @@ const register = async (req, res, next) => {
       salt
     });
 
-    if (!newUser) {
-      return next(new BadRequest400('invalid user @register'));
-    }
+    if (!newUser) return next(new BadRequest400('invalid user @register'));
 
     return res.status(201).json({
       message: `register ${name} successfully!`
@@ -66,32 +60,23 @@ const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    console.log({...req.body})
-
     if (!email || !password) {
       return next(new BadRequest400('all field required @login'));
     }
 
-    //  if(password?.length < 6){
-    //   return next(new BadRequest400('password must be at least 5 char @register'))
-    // }
-
-    // exec bcoz we need to validatePassword
     const user = await User.findOne({ email }).exec();
 
     if (!user) {
       return next(new NotFound404('User not found @login'));
     }
 
+    // pass, hashed_password
     const passMatch = await compare(password, user.password);
 
     if (!passMatch || typeof passMatch !== 'boolean') {
       return next(new Unauthorized401('wrong password @login'));
     }
 
-    console.log('password & email match ----- ');
-
-    // generate a access token
     const accessToken = jwt.sign(
       {
         _id: user._id,
@@ -102,31 +87,31 @@ const login = async (req, res, next) => {
       { expiresIn: '1h' }
     );
 
-    // generate refresh token
     const refreshToken = jwt.sign(
       { email: user.email },
       process.env.REFRESH_SECRET,
       { expiresIn: '1d' }
     );
 
-    // persist/cache the refreshToken as 'jwt' in res.cookie with expiry date
-    // why await?
-    await res.cookie('jwt', refreshToken, {
-      httpOnly: true, // accessible only by webserver
-      // secure: true, // https
-      // sameSite: 'None', // cross-site cookie
-      maxAge: 7 * 24 * 60 * 60 * 1000 //
+    user.refresh_token = refreshToken;
+
+    const result = await user.save();
+
+    if (!result) return next(new BadRequest400('invalid refresh @login'));
+
+    // refresh token for cookie
+    res.cookie('jwt', refreshToken, {
+      maxAge: 7 * 24 * 60 * 60 * 1000 // maxAge: 60* 1000
     });
 
-    // destructure
     const { _id, name, seller } = user;
 
     return res.json({
       accessToken,
       user: { _id, name, email, seller }
     });
-  } catch (err) {
-    return next(err);
+  } catch (error) {
+    return next(error);
   }
 };
 
@@ -138,52 +123,139 @@ const login = async (req, res, next) => {
 
 const logout = async (req, res, next) => {
   try {
-    // de-mount
     const { cookies } = req;
 
     if (!cookies?.jwt) return res.sendStatus(204); // no content
+    // eslint-disable-next-line camelcase
+    const refresh_token = cookies.jwt;
 
-    // clearing
-    res.clearCookie('jwt', { httpOnly: true, sameSite: 'None' });
+    const user = await User.findOne({ refresh_token }).exec();
 
-    return res.json({ message: 'logged out' });
-  } catch (err) {
-    return next(err);
+    if (!user) {
+      res.clearCookie('jwt');
+      return res.sendStatus(204);
+    }
+
+    // clear cookie at database
+    user.refresh_token = undefined;
+
+    const result = await user.save();
+
+    if (!result) return next(new BadRequest400('invalid @logout'));
+
+    res.clearCookie('jwt');
+
+    // 204 no-content
+    return res.sendStatus(204);
+  } catch (error) {
+    return next(error);
   }
+};
+
+/**
+ * @desc Refresh
+ * @route GET - /auth/refresh
+ * @access Public - bcoz access token has expired
+ */
+
+const refresh = async (req, res, next) => {
+  const { cookies } = req;
+
+  console.log({ cookieRef: cookies.jwt });
+
+  if (!cookies?.jwt) return next(new NotFound404('cookie not found! @refresh'));
+
+  // eslint-disable-next-line camelcase
+  const refresh_token = cookies.jwt;
+
+  const foundUser = await User.findOne({ refresh_token }).exec();
+
+  // console.log({ foundUser, refresh_token });
+
+  // if (!foundUser) return next(new Forbidden403('Forbidden token @refresh'));
+
+  // console.log(foundUser);
+
+  // refresh token reuse
+
+  // if (!foundUser) {
+  //   return jwt.verify(
+  //     refresh_token,
+  //     process.env.REFRESH_SECRET,
+  //     async (err, decoded) => {
+  //       if (err) {
+  //         console.log(err);
+  //         // return next(err);
+  //         // return next(new Forbidden403('Forbidden verify1 @refresh'));
+  //       }
+  //       console.log('attempt refresh reuse!');
+
+  //       const hackedUser = await User.findOne({ email: decoded.email }).exec();
+  //       hackedUser.refresh_token = undefined;
+  //       const result = await hackedUser.save();
+  //       console.log({ result });
+  //       return res.sendStatus(405); // Forbidden
+  //     }
+  //   );
+  // }
+
+  const { _id, name, email, seller } = foundUser;
+
+  return jwt.verify(
+    refresh_token,
+    process.env.REFRESH_SECRET,
+    async (err, decoded) => {
+      if (err || email !== decoded.email)
+        return next(new Forbidden403('Forbidden verify2 @refresh'));
+
+      const accessToken = jwt.sign(
+        {
+          _id,
+          email,
+          seller
+        },
+        process.env.ACCESS_SECRET,
+        { expiresIn: '30min' }
+      );
+
+      return res.json({ accessToken, user: { _id, name, email, seller } });
+    }
+  );
 };
 
 // checks and decoder of "Bearer xxx" req.headers.authorization
 // then "Mount" data to req.auth
 const requireLogin = expressJwt({
-	secret: process.env.ACCESS_SECRET,
-	algorithms: ['HS256'],
-	requestProperty: 'auth'
-})
+  secret: process.env.ACCESS_SECRET,
+  algorithms: ['HS256'],
+  requestProperty: 'auth'
+});
 
-// for authorization
 const hasAuth = (req, res, next) => {
-    // req.profile._id is ObjectId(mongoose-id)
-    //  req.auth._id is String
+  console.log({ reqProf: req.profile.email, reqAuth: req.auth.email });
 
-    console.log('hasAuth')
+  const authorized =
+    req.profile && req.auth && String(req.profile._id) === String(req.auth._id);
 
-    const authorized =
-      req.profile &&
-      req.auth &&
-      String(req.profile._id) === String(req.auth._id);
+  if (!authorized) return next(new Forbidden403('Forbidden! @isAuth'));
 
-    if (!authorized) {
-      return next(new Forbidden403('Forbidden! @isAuth'))
-    }
-    return next();
+  return next();
 };
 
-const hdrChk = (req, res, next) =>{
+// header check
+const hdrChk = (req, res, next) => {
+  const authHeaders = req.headers.authorization || req.headers.Authorization;
+  console.log({ authHeaders });
 
-  const authHeaders  = req.headers.authorization || req.headers.Authorization
-  console.log({authHeaders})
+  next();
+};
 
-  next()
-}
-
-module.exports = { hdrChk, login, register, logout, hasAuth, requireLogin };
+module.exports = {
+  hdrChk,
+  login,
+  register,
+  refresh,
+  logout,
+  hasAuth,
+  requireLogin
+};

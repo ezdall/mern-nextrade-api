@@ -24,16 +24,16 @@ router
   .post(requireLogin, hasAuth, isSeller, create)
   .get(requireLogin, hasAuth, listByOwner);
 
-router
-  .route('/shops/:shopId')
-  .patch(requireLogin, isOwner, update)
-  .delete(requireLogin, isOwner, remove);
-
 router.get('/shops/logo/:shopId', photo, defaultPhoto);
 
 router.get('/shops/defaultphoto', defaultPhoto);
 
-router.param('shopId', shopById);
+router
+  .route('/shops/:shopId')
+  .patch(requireLogin, hasAuth, isOwner, update) // this will be error
+  .delete(requireLogin, hasAuth, isOwner, remove); // hasAuth?, error
+
 router.param('userId', userById);
+router.param('shopId', shopById);
 
 module.exports = { shopRoute: router };

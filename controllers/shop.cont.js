@@ -5,95 +5,115 @@ const _extend = require('lodash/extend');
 const { IncomingForm } = require('formidable');
 
 const Shop = require('../models/shop.model');
-const Product = require('../models/product.model')
-
-// const defaultImage = require('../dist/img/default.jpg')
-// import defaultImage from '../dist/img/default.jpg';
+const Product = require('../models/product.model');
 
 // helper
 const { BadRequest400 } = require('../helpers/bad-request.error');
 const { Unauthorized401 } = require('../helpers/unauthorized.error');
 const { Forbidden403 } = require('../helpers/forbidden.error');
 const { NotFound404 } = require('../helpers/not-found.error');
-const { isMongoObj } = require('../helpers/is-mongo-obj')
+// const { isMongoObj } = require('../helpers/is-mongo-obj');
 
 const list = async (req, res, next) => {
   try {
     const shops = await Shop.find()
+      .select('-image') // for dev
+      .populate({ path: 'owner', select: 'name' }) // for dev
       .lean()
       .exec();
 
-    if (!shops) return next(new NotFound404('no shops @list-shop'));
+    if (!shops) return next(new NotFound404('error shops @list-shop'));
 
     return res.json(shops);
-  } catch (err) {
-    return next(err);
+  } catch (error) {
+    return next(error);
   }
 };
 
 const listByOwner = async (req, res, next) => {
   try {
+    if (!req.profile)
+      return next(new NotFound404('no profile @shop-listByOwner'));
+
     const shops = await Shop.find({ owner: req.profile._id })
+      .select('-image.data')
       .populate({ path: 'owner', select: 'name' })
       .lean()
       .exec();
 
-    if (!shops) return next(new NotFound404('no shops @list-by-owner'));
+    if (!shops) return next(new NotFound404('err shops @list-by-owner'));
 
     return res.json(shops);
-  } catch (err) {
-    return next(err);
+  } catch (error) {
+    return next(error);
   }
 };
 
 const read = (req, res, next) => {
-  if (!req.shop) return next(new NotFound404('no shop'));
+  if (!req?.shop) return next(new NotFound404('no req.shop @readShop'));
 
-  const shop = req.shop
+  req.shop.image = undefined;
 
-  shop.image = undefined;
-
-  return res.json(shop);
+  return res.json(req.shop);
 };
 
 const create = (req, res, next) => {
-  // only allowed 'multipar/form-data' (formidable)
   // reject 'json' and 'form-urlencoded'
-  console.log(req.body)
+  // Check if request is 'multipart/form-data' (formidable)
+  if (!req.is('multipart/form-data'))
+    return next(
+      new BadRequest400(
+        'Invalid form type. Only "multipart/form-data" is allowed.'
+      )
+    );
 
-  if (!req.is('multipart/form-data')) {
-    return next(new BadRequest400('invalid form'));
-  }
-
+  // pase the form using formidable
   const form = new IncomingForm({
     keepExtensions: true,
     maxFileSize: 2 * 1024 * 1024 // 2mb
   });
 
   return form.parse(req, async (err, fields, files) => {
-    if (err) return next(err);
-    console.log({files}) // image
-    console.log({fields}) // name, desc
-    try {
-      const shop = new Shop(fields);
+    if (err) {
+      return next(new BadRequest400(`Error parsing form data: ${err.message}`));
+      // return next(err);
+    }
+    console.log({ files }); // img
+    console.log({ fields }); // name, doc
 
+    try {
+      // create a new shop using form fields
+      const shop = new Shop(fields);
       shop.owner = req.profile._id;
 
-      if (files.image) {
-        if (files.image?.size > 1000000) {
-          return next(new BadRequest400('max 2mb image size '));
+      // process image file if provided
+      if (files?.image) {
+        // validate image size and prop
+        if (files.image?.size > 2 * 1024 * 1024) {
+          return next(new BadRequest400('Image size should not exceed 2MB.'));
         }
 
-        if(!files.image.filepath || !files.image.mimetype){
-          return next(new BadRequest400('lack image info @createShop-file-image'))
+        if (!files.image?.filepath || !files.image?.mimetype) {
+          return next(
+            new BadRequest400(
+              'missing image file or type @createShop-file-image'
+            )
+          );
         }
-
-        shop.image.data = fs.readFileSync(files.image.filepath); // 'path' to 'filepath'
-        shop.image.contentType = files.image.mimetype; // 'type' to 'mimetype'
+        // read image and set to shop
+        shop.image.data = fs.readFileSync(files.image?.filepath);
+        shop.image.contentType = files.image?.mimetype;
       }
 
+      // save shop instance
       const result = await shop.save();
-      // console.log(isMongoObj(result))
+
+      // validate result
+      if (!result) {
+        return next(new BadRequest400('Failed to create @crtShop'));
+      }
+
+      result.image.data = undefined; // remove during dev only?
 
       return res.status(201).json(result);
     } catch (error) {
@@ -102,10 +122,9 @@ const create = (req, res, next) => {
   });
 };
 
-const update = async (req, res, next) => {
-  if (!req.is('multipart/form-data')) {
-    return next(new BadRequest400('invalid form @updShop'));
-  }
+const update = (req, res, next) => {
+  if (!req.is('multipart/form-data'))
+    return next(new BadRequest400('invalid form'));
 
   const form = new IncomingForm({
     keepExtensions: true,
@@ -120,25 +139,23 @@ const update = async (req, res, next) => {
 
       shop = _extend(shop, fields);
 
-      if (files.image) {
-  
-        if (files.image?.size > 1000000) {
-          return next(new BadRequest400('max 2mb image size '));
+      if (files?.image) {
+        if (files.image?.size > 2 * 2 * 1024) {
+          return next(new BadRequest400('Image size should not exceed 2MB.'));
         }
 
-        if(!files.image.filepath || !files.image.mimetype){
-          return next(new BadRequest400('lack image info @updShop-file-image'))
+        if (!files.image?.filepath || !files.image?.mimetype) {
+          return next(new BadRequest400('lack image info @updShop-file-image'));
         }
 
-        shop.image.data = fs.readFileSync(files.image.filepath); // 'path' to 'filepath'
-        shop.image.contentType = files.image.mimetype; // 'type' to 'mimetype'
+        shop.image.data = fs.readFileSync(files.image?.filepath);
+        shop.image.contentType = files.image?.mimetype;
       }
-
 
       const result = await shop.save();
 
       if (!result) {
-        return next(new BadRequest400('invalid update @updShop'));
+        return next(new BadRequest400('Failed to update @crtShop'));
       }
 
       return res.json(result);
@@ -152,16 +169,23 @@ const remove = async (req, res, next) => {
   try {
     const { shop } = req;
 
-    if (!shop) return next(new NotFound404('shop not found @delShop'));
-    // add cannot delete if has product
-    // return 
-    const product = await Product.findOne({shop: shop._id}).lean().exec()
+    if (!shop) return next(new NotFound404('Shop not found @delShop'));
 
-    if(product){
-      return next(new BadRequest400('shop has product'));
+    // check if shop has any associated products
+    // const product = await Product.findOne({shop: shop._id}).lean().exec()
+    const hasProducts = await Product.exists({ shop: shop._id });
+
+    if (hasProducts) {
+      return next(
+        new BadRequest400('Cannot delete because it shop has products')
+      );
     }
 
-    const deletedShop = shop.deleteOne();
+    const deletedShop = await shop.deleteOne();
+
+    if (!deletedShop) {
+      return next(new NotFound404('Failed to delete @delShop'));
+    }
 
     return res.json(deletedShop);
   } catch (err) {
@@ -170,54 +194,75 @@ const remove = async (req, res, next) => {
 };
 
 const isOwner = (req, res, next) => {
-  const { shop, auth } = req
+  const { shop, auth } = req;
 
-  const isOwner = shop && auth && String(shop.owner?._id) === String(auth._id)
+  // const wasOwner = shop && auth && String(shop.owner?._id) === String(auth._id);
 
-   if(!isOwner){
-     return next(new Forbidden403('forbidden! not owner'))
-   }
+  // Verify that shop and auth exist and that the shop owner matches the authenticated user
+  const userIsOwner = shop?.owner?._id.toString() === auth?._id.toString();
 
-  // console.log('isOwner');
+  if (!userIsOwner) {
+    return next(
+      new Forbidden403('Forbidden: You are not the owner of this shop.')
+    );
+  }
+
+  // continue to next middleware
   return next();
 };
 
 const shopById = async (req, res, next, shopId) => {
   try {
+    // validate shopId
     if (!shopId || !mongoose.isValidObjectId(shopId)) {
-      return next(new BadRequest400('valid id is required @shopById'));
+      return next(new Unauthorized401('valid shop id is required @shopById'));
     }
 
+    // find shop, then populate owner field
     const shop = await Shop.findById(shopId)
-      .populate({ path: 'owner', select: 'name' })
+      .populate({ path: 'owner', select: 'name ' }) // for client
       .exec();
 
-    if (!shop) return next(new NotFound404('Shop not found'));
+    console.log({ shop });
 
-    // mount
+    if (!shop) return next(new Unauthorized401('Shop not found'));
+
+    // attach
     req.shop = shop;
-    // must
+
+    // proceed to next middleware
     return next();
-  } catch (err) {
-    return next(err);
+  } catch (error) {
+    return next(error);
   }
 };
 
 const photo = (req, res, next) => {
-  const { image } = req.shop;
+  const { shop } = req;
 
-  if (image?.data) {
-    res.set('Content-Type', image.contentType);
-    return res.send(image.data);
+  // console.log({shop})
+
+  // must check if shop exist and has image data
+  if (shop?.image?.data) {
+    // set content type to shop image content type
+    res.set('Content-Type', shop.image.contentType);
+    return res.send(shop.image.data);
   }
-
-  console.log('no-photo');
-
+  // proceed to default photo, if not image data found
   return next();
 };
 
-const defaultPhoto = async (req, res, next) => {
-  res.sendFile(path.resolve(__dirname, '..', 'dist', 'img', 'default.jpg'));
+const defaultPhoto = (req, res, next) => {
+  // define path for default image file
+  const defaultImagePath = path.resolve(
+    __dirname,
+    '..',
+    'dist',
+    'img',
+    'default.jpg'
+  );
+
+  return res.sendFile(defaultImagePath);
 };
 
 module.exports = {
@@ -227,8 +272,8 @@ module.exports = {
   create,
   update,
   remove,
-  photo,
-  defaultPhoto,
   isOwner,
-  shopById
+  shopById,
+  photo,
+  defaultPhoto
 };

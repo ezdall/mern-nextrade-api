@@ -5,22 +5,21 @@ const shopSchema = new Schema(
     name: {
       type: String,
       trim: true,
-      required: 'Name is required'
-    },
-    image: {
-      data: Buffer,
-      contentType: String
+      required: 'name is required'
     },
     description: {
       type: String,
       trim: true
+    },
+    image: {
+      data: Buffer,
+      contentType: String
     },
     owner: {
       type: Schema.ObjectId,
       ref: 'user'
     }
   },
-  // other options
   { timestamps: true, versionKey: false }
 );
 

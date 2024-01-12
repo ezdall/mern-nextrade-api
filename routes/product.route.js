@@ -28,7 +28,11 @@ router.route('/products/related/:productId').get(listRelated);
 
 router.route('/products/categories').get(listCategories);
 
-router.route('/products').get(list);
+router.route('/products').get(list); // list w/ Query
+
+router.route('/product/image/:productId').get(photo, defaultPhoto);
+
+router.route('products/defaultphoto').get(defaultPhoto);
 
 router.route('/product/:productId').get(read);
 
@@ -37,11 +41,6 @@ router
   .patch(requireLogin, isOwner, update)
   .delete(requireLogin, isOwner, remove);
 
-router.route('/product/image/:productId').get(photo, defaultPhoto);
-
-router.route('/products/defaultphoto').get(defaultPhoto);
-
-//
 router.param('shopId', shopById);
 router.param('productId', productById);
 

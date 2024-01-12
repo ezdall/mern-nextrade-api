@@ -15,7 +15,7 @@ const productSchema = new Schema(
     },
     price: {
       type: Number,
-      required: 'Price is required'
+      require: 'Price is required'
     },
     image: {
       data: Buffer,
@@ -23,17 +23,18 @@ const productSchema = new Schema(
     },
     description: {
       type: String,
-      trim: true
+      trim: true,
+      maxlength: 100
     },
     category: {
-      type: String
+      type: String,
+      trim: true
     },
     shop: {
       type: Schema.ObjectId,
       ref: 'shop'
     }
   },
-  // other options
   { timestamps: true, versionKey: false }
 );
 

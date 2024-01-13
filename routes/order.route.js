@@ -1,15 +1,12 @@
 const router = require('express').Router();
 
-const { requireLogin } = require('../controllers/auth.cont');
-
+const { requireLogin, hasAuth } = require('../controllers/auth.cont');
 const { isOwner, shopById } = require('../controllers/shop.cont');
-
 const {
+  userById,
   stripeCustomer,
-  createCharge,
-  userById
+  createCharge
 } = require('../controllers/user.cont');
-
 const {
   decreaseQuantity,
   increaseQuantity,
@@ -23,17 +20,31 @@ const {
   orderById,
   listByShop,
   listByUser,
-  getStatusValues
+  getStatusValues,
+  saveCartItems,
+  getCart
 } = require('../controllers/order.cont');
+
+// create order
+router.route('/orders/:userId').post(requireLogin, hasAuth, create);
+
+// save cart, get cart
+router.route('/orders/cart/:userId').post(requireLogin, hasAuth, saveCartItems);
+router.route('/orders/cart/:cartId').get(requireLogin, getCart);
+
+// list of orders for each shop
+router.get('/orders/shop/:shopId', requireLogin, isOwner, listByShop);
 
 router
   .route('/orders/:userId')
-  .post(requireLogin, stripeCustomer, decreaseQuantity, create);
+  .post(requireLogin, hasAuth, stripeCustomer, decreaseQuantity, create);
 
-router.get('/orders/shop/:shopId', requireLogin, isOwner, listByShop);
+// router.get('/orders/shop/:shopId', requireLogin, isOwner, listByShop);
 
-router.get('/orders/user/:userId', requireLogin, listByUser);
+// list orders by User
+router.get('/orders/user/:userId', requireLogin, hasAuth, listByUser);
 
+// ?
 router.get('/order/status-val', getStatusValues);
 
 router.get('/order/:orderId', read);
@@ -42,9 +53,9 @@ router
   .route('/order/:shopId/cancel/:productId')
   .patch(requireLogin, isOwner, increaseQuantity, update);
 
-router
-  .route('/order/:orderId/charge/:userId/:shopId')
-  .patch(requireLogin, isOwner, createCharge, update);
+// router
+//   .route('/order/:orderId/charge/:userId/:shopId')
+//   .patch(requireLogin, isOwner, createCharge, update);
 
 router.route('/order/status/:shopId').patch(requireLogin, isOwner, update);
 

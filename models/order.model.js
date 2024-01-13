@@ -35,7 +35,7 @@ const orderSchema = new Schema(
       country: { type: String, required: 'Country is required' }
     },
     payment_id: {},
-    user: { type: Schema.ObjectId, ref: 'User' }
+    user: { type: Schema.ObjectId, ref: 'user' }
   },
   // other options
   { timestamps: true, versionKey: false }
@@ -43,4 +43,4 @@ const orderSchema = new Schema(
 
 const Order = model('order', orderSchema);
 
-module.exports = { Order, CartItem };
+module.exports = { Order, CartItem, cartItemSchema };

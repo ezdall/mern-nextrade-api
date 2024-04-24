@@ -1,5 +1,5 @@
 {
-  "name": "mern-market-api",
+  "name": "mern-nextrade-api",
   "version": "0.1.0",
   "main": "server.js",
   "dependencies": {

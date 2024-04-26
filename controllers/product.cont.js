@@ -12,45 +12,45 @@ const { Unauthorized401 } = require('../helpers/unauthorized.error');
 const { Forbidden403 } = require('../helpers/forbidden.error');
 const { NotFound404 } = require('../helpers/not-found.error');
 
-const list = async (req, res, next) => {
-  try {
-    const query = {};
+// const list = async (req, res, next) => {
+//   try {
+//     const query = {};
 
-    if (req.query?.search) {
-      query.name = {
-        $regex: req.query.search,
-        $options: 'i'
-      };
-    }
-    if (req.query?.category && req.query.category !== 'All') {
-      query.category = req.query.category;
-    }
+//     if (req.query?.search) {
+//       query.name = {
+//         $regex: req.query.search,
+//         $options: 'i'
+//       };
+//     }
+//     if (req.query?.category && req.query.category !== 'All') {
+//       query.category = req.query.category;
+//     }
 
-    const products = await Product.find(query)
-      .populate({ path: 'shop', select: 'name' })
-      .select('-image')
-      .lean()
-      .exec();
+//     const products = await Product.find(query)
+//       .populate({ path: 'shop', select: 'name' })
+//       .select('-image')
+//       .lean()
+//       .exec();
 
-    // check only for internal error
-    if (!products) {
-      // return [], let front-end do if-else
-      return next(new NotFound404('error products @listProds'));
-    }
+//     // check only for internal error
+//     if (!products) {
+//       // return [], let front-end do if-else
+//       return next(new NotFound404('error products @listProds'));
+//     }
 
-    return res.json(products);
-  } catch (error) {
-    return next(error);
-  }
-};
+//     return res.json(products);
+//   } catch (error) {
+//     return next(error);
+//   }
+// };
 
-const read = (req, res, next) => {
-  if (!req.product) return next(new NotFound404('no product @read-product'));
+// const read = (req, res, next) => {
+//   if (!req.product) return next(new NotFound404('no product @read-product'));
 
-  req.product.image = undefined;
+//   req.product.image = undefined;
 
-  return res.json(req.product);
-};
+//   return res.json(req.product);
+// };
 
 const create = async (req, res, next) => {
   if (!req.is('multipart/form-data')) {
@@ -208,25 +208,25 @@ const productById = async (req, res, next, prodId) => {
   }
 };
 
-const listByShop = async (req, res, next) => {
-  try {
-    if (!req.shop) return next(new NotFound404('no shop @prod-listByShop'));
+// const listByShop = async (req, res, next) => {
+//   try {
+//     if (!req.shop) return next(new NotFound404('no shop @prod-listByShop'));
 
-    const products = await Product.find({ shop: req.shop._id })
-      .populate({ path: 'shop', select: 'name' })
-      .select('-image') // ?
-      .lean()
-      .exec();
+//     const products = await Product.find({ shop: req.shop._id })
+//       .populate({ path: 'shop', select: 'name' })
+//       .select('-image') // ?
+//       .lean()
+//       .exec();
 
-    if (!products) {
-      return next(new NotFound404('error products @listByShop'));
-    }
+//     if (!products) {
+//       return next(new NotFound404('error products @listByShop'));
+//     }
 
-    return res.json(products);
-  } catch (error) {
-    return next(error);
-  }
-};
+//     return res.json(products);
+//   } catch (error) {
+//     return next(error);
+//   }
+// };
 
 const listLatest = async (req, res, next) => {
   try {

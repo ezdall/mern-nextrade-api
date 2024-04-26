@@ -1,7 +1,10 @@
 require('express-async-errors');
-require('dotenv').config({
-  path: './config/config.env'
-});
+require('dotenv').config(); // access .env at root '/'
+
+// my local config 2
+// require('dotenv').config({
+//   path: './config/config.env'
+// });
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -58,7 +61,7 @@ app.use(errorHandler);
 mongoose.connection.once('open', () => {
   app.listen(PORT, err => {
     if (err) throw err;
-    console.log(`MERN-Market Server is running on http://localhost:${PORT}`);
+    console.log(`Server NexTrade is running on http://localhost:${PORT}`);
   });
 });
 

@@ -93,6 +93,45 @@ const create = async (req, res, next) => {
   });
 };
 
+// all product
+const list = async (req, res, next) => {
+  try {
+    const query = {};
+
+    if (req.query.search) {
+      query.name = {
+        $regex: req.query.search,
+        $options: 'i'
+      };
+    }
+    if (req.query.category && req.query.category !== 'All') {
+      query.category = req.query.category;
+    }
+    const products = await Product.find(query)
+      .populate({ path: 'shop', select: 'name' })
+      .select('-image')
+      .lean()
+      .exec();
+
+    if (!products) {
+      // products?.length
+      return next(new NotFound404('no products @listProds'));
+    }
+
+    return res.json(products);
+  } catch (err) {
+    return next(err);
+  }
+};
+
+const read = (req, res, next) => {
+  const prod = req.product;
+
+  prod.image = undefined;
+
+  return res.json(prod);
+};
+
 const update = (req, res, next) => {
   if (!req.is('multipart/form-data')) {
     return next(new BadRequest400('invalid form @update-Prod'));
@@ -199,12 +238,32 @@ const listLatest = async (req, res, next) => {
       .exec();
 
     if (!products) {
+      // !products?.length
       return next(new NotFound404('no products @listLatest'));
     }
 
     return res.json(products);
   } catch (error) {
     return next(error);
+  }
+};
+
+const listByShop = async (req, res, next) => {
+  try {
+    const products = await Product.find({ shop: req.shop._id })
+      .populate({ path: 'shop', select: 'name' })
+      .select('-image')
+      .lean()
+      .exec();
+
+    if (!products) {
+      // !products?.length
+      return next(new NotFound404('no products @listByShop'));
+    }
+
+    return res.json(products);
+  } catch (err) {
+    return next(err);
   }
 };
 

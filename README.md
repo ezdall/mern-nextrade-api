@@ -1,6 +1,6 @@
-# MERN NexTrade -
+## MERN NexTrade Apis
 
-- nodejs v14
+- nodejs v16
 - express
 - mongoose
 - jsonwebtoken

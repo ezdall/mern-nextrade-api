@@ -2,6 +2,8 @@ const allowedOrigins = [
   'http://127.0.0.1:5173', // vite
   'http://localhost:5000', // react
   'http://localhost:3000',
+  // add remote react? gh-pages
+
   // no internet
   'null'
 ];

@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 
 async function connectMDB() {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI_MARKET, {
+    // MONGO_URI_MARKET - local
+    const conn = await mongoose.connect(process.env.MONGO_URI_NEXTRADE_R, {
       useNewUrlParser: true,
       useCreateIndex: true,
       useUnifiedTopology: true,

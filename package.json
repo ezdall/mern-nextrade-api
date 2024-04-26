@@ -1,7 +1,10 @@
 {
-  "name": "mern-market-api",
-  "version": "0.1.0",
+  "name": "mern-nextrade-api",
+  "version": "1.0",
+  "description": "express server for nextrade app",
   "main": "server.js",
+  "license": "MIT",
+  "private":"false",
   "dependencies": {
     "axios": "0.21.4",
     "bcrypt": "5.0.1",
@@ -36,8 +39,7 @@
     "dev": "nodemon server.js"
   },
   "engines": {
-    "node": "14.20.1"
+    "node": "16.20.2"
   },
-  "keywords": [],
-  "license": "MIT"
+  "keywords": []
 }

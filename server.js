@@ -40,6 +40,7 @@ app.use(cookieParser()); // parse req.cookies
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
 
+// app.use('/favicon.ico', express.static(path.join(__dirname, 'dist', 'favicon.ico')))
 app.use('/dist', express.static(path.join(__dirname, 'dist')));
 
 // for /, /index, /index.html

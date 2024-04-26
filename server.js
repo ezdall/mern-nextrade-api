@@ -1,7 +1,10 @@
 require('express-async-errors');
-require('dotenv').config({
-  path: './config/config.env'
-});
+require('dotenv').config(); // access .env at root '/'
+
+// my local config 2
+// require('dotenv').config({
+//   path: './config/config.env'
+// });
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -9,7 +12,7 @@ const cors = require('cors');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
-const helmet = require('helmet')
+const helmet = require('helmet');
 
 const { connectMDB } = require('./config/db');
 const { corsOptions } = require('./config/cors-options');
@@ -34,7 +37,7 @@ app.use(morgan('dev'));
 app.use(express.json()); // parse req.body
 app.use(cookieParser()); // parse req.cookies
 app.use(express.urlencoded({ extended: true }));
-app.use(helmet())
+app.use(helmet());
 
 app.use('/dist', express.static(path.join(__dirname, 'dist')));
 
@@ -57,12 +60,12 @@ app.use(errorHandler);
 mongoose.connection.once('open', () => {
   app.listen(PORT, err => {
     if (err) throw err;
-    console.log(`MERN-Market Server is running on http://localhost:${PORT}`);
+    console.log(`Server NexTrade is running on http://localhost:${PORT}`);
   });
 });
 
 mongoose.connection.on('error', err => {
-  console.error('error @mongoo-conn-error ---', err);
+  console.error('error @mongo-conn-error ---', err);
 });
 
 module.exports = app;

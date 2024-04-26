@@ -34,8 +34,8 @@ const create = async (req, res, next) => {
           return next(new BadRequest400('max 2mb image size '));
         }
 
-        if(!files.image.filepath || !files.image.mimetype){
-          return next(new BadRequest400('lack image info @crtProd-file-image'))
+        if (!files.image.filepath || !files.image.mimetype) {
+          return next(new BadRequest400('lack image info @crtProd-file-image'));
         }
 
         product.image.data = fs.readFileSync(files.image.filepath); // 'path' to 'filepath'
@@ -74,7 +74,8 @@ const list = async (req, res, next) => {
       .lean()
       .exec();
 
-    if (!products) { // products?.length
+    if (!products) {
+      // products?.length
       return next(new NotFound404('no products @listProds'));
     }
 
@@ -111,9 +112,8 @@ const update = (req, res, next) => {
       prod = _extend(prod, fields);
 
       if (files.image) {
-
-        if(!files.image.filepath || !files.image.mimetype){
-          return next(new BadRequest400('lack image info @updProd-file-image'))
+        if (!files.image.filepath || !files.image.mimetype) {
+          return next(new BadRequest400('lack image info @updProd-file-image'));
         }
 
         prod.image.data = fs.readFileSync(files.image.filepath); // 'path' to 'filepath'
@@ -180,7 +180,8 @@ const listLatest = async (req, res, next) => {
       .lean()
       .exec();
 
-    if (!products) { // !products?.length
+    if (!products) {
+      // !products?.length
       return next(new NotFound404('no products @listLatest'));
     }
 
@@ -198,7 +199,8 @@ const listByShop = async (req, res, next) => {
       .lean()
       .exec();
 
-    if (!products) {// !products?.length
+    if (!products) {
+      // !products?.length
       return next(new NotFound404('no products @listByShop'));
     }
 
@@ -210,9 +212,7 @@ const listByShop = async (req, res, next) => {
 
 const listCategories = async (req, res, next) => {
   try {
-    const products = await Product.distinct('category', {})
-      .lean()
-      .exec();
+    const products = await Product.distinct('category', {}).lean().exec();
 
     if (!products) {
       return next(new NotFound404('no products @listCategories'));
@@ -235,7 +235,7 @@ const listRelated = async (req, res, next) => {
       .lean()
       .exec();
 
-      console.log(products)
+    console.log(products);
 
     if (!products) {
       return next(new NotFound404('no products @listRelated'));

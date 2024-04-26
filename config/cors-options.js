@@ -2,6 +2,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5000', // react
 
+  // add remote react? gh-pages
   // no internet
   'null'
 ];

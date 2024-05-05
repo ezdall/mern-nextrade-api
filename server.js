@@ -1,11 +1,6 @@
 require('express-async-errors');
 require('dotenv').config(); // access .env at root '/'
 
-// my local config 2
-// require('dotenv').config({
-//   path: './config/config.env'
-// });
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -14,7 +9,6 @@ const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
 const helmet = require('helmet');
 
-// const { port } = require('./config/config')
 const { connectMDB } = require('./config/db');
 const { corsOptions } = require('./config/cors-options');
 const { errorHandler } = require('./helpers/error-handler');
@@ -26,7 +20,7 @@ const { productRoute } = require('./routes/product.route');
 const { shopRoute } = require('./routes/shop.route');
 const { orderRoute } = require('./routes/order.route');
 
-connectMDB().catch(err => console.error('connect-MongoDB Error', err.stack));
+connectMDB().catch(err => console.error('connect-MongoDB Error2', err.stack));
 
 const app = express();
 
@@ -38,7 +32,7 @@ app.use(morgan('dev'));
 app.use(express.json()); // parse req.body
 app.use(cookieParser()); // parse req.cookies
 app.use(express.urlencoded({ extended: true }));
-app.use(helmet());
+// app.use(helmet());
 
 // app.use('/favicon.ico', express.static(path.join(__dirname, 'dist', 'favicon.ico')))
 app.use('/dist', express.static(path.join(__dirname, 'dist')));
@@ -60,9 +54,16 @@ app.all('*', (req, res, next) => {
 app.use(errorHandler);
 
 mongoose.connection.once('open', () => {
+  const isProd = process.env.NODE_ENV === 'production';
+
+  const nodeEnv = isProd ? 'PROD' : 'DEV';
+  const hostNamePort = isProd
+    ? 'nextrade-api.onrender.com'
+    : `localhost:${PORT}`;
+
   app.listen(PORT, err => {
     if (err) throw err;
-    console.log(`Server NexTrade is running on http://localhost:${PORT}`);
+    console.log(`NexTrade-Srv -${nodeEnv}- running at ${hostNamePort}`);
   });
 });
 

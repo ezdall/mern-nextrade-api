@@ -20,10 +20,12 @@ const errorHandler = (error, req, res, next) => {
   }
   // for stripe
   else if (stripeErrTypes[error.rawType]) {
-    console.log('stripe error @errHand');
+    console.log('stripe error @errHand', {
+      ...error
+    });
   } else {
     // console.error('| ==--- MyErrorStack ---== |:', error.stack);
-    console.log({ error });
+    console.log({ ...error });
   }
 
   // sent to default express errorHandler
@@ -51,8 +53,6 @@ const errorHandler = (error, req, res, next) => {
   if (error.isAxiosError) {
     const { data, status: status2, statusText } = error.response;
 
-    // console.log({  });
-
     return res.status(status2).json({
       error: `${status2} ${statusText} : ${data.error_description} - ${data.error}`,
       inner: data.error_description
@@ -68,6 +68,7 @@ const errorHandler = (error, req, res, next) => {
     });
   }
 
+  // prevent by catching Object id format
   if (error.name === 'CastError') {
     console.log('--CastError--');
   }
@@ -76,10 +77,14 @@ const errorHandler = (error, req, res, next) => {
     console.log('--ValidatorError--');
   }
 
+  // ?
   if (error.name === 'ValidationError') {
-    console.log('--Validation Error--');
+    return res.status(400).json({
+      message: 'validation error'
+    });
   }
 
+  // MongoError?
   if (error.name === 'MongooseError') {
     console.log('--Mongoose Error--');
   }
@@ -103,15 +108,13 @@ const errorHandler = (error, req, res, next) => {
     });
   }
 
-  // mongoose Error, duplicate
-  if (error.name === 'MongoError' && error.code === (11000 || 11001)) {
+  // mongoose Error, duplicate 409
+  if (error.name === 'MongoError' && [11_000, 11_001].includes(error.code)) {
     const uniqueVal = Object.values(error.keyValue);
 
     // console.log(getUniqueErrorMessage(error))
     return res.status(409).json({ error: `${uniqueVal} already exist` });
   }
-
-  console.log({ status, error });
 
   return res
     .status(status)

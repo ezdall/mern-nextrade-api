@@ -1,14 +1,22 @@
 const mongoose = require('mongoose');
 
 async function connectMDB() {
-  const { MONGO_URI_NEXTRADE_PROD, MONGO_URI_NEXTRADE_DEV, NODE_ENV } =
-    process.env;
+  const {
+    MONGO_URI_NEXTRADE_PROD,
+    MONGO_URI_NEXTRADE_DEV,
+    MONGO_URI_TEST,
+    NODE_ENV
+  } = process.env;
 
-  // use local-uri, if null or 'development'
-  const mongoUri =
-    NODE_ENV === 'production'
-      ? MONGO_URI_NEXTRADE_PROD
-      : MONGO_URI_NEXTRADE_DEV;
+  let mongoUri;
+
+  if (NODE_ENV === 'production') {
+    mongoUri = MONGO_URI_NEXTRADE_PROD;
+  } else if (NODE_ENV === 'test') {
+    mongoUri = MONGO_URI_TEST;
+  } else {
+    mongoUri = MONGO_URI_NEXTRADE_DEV;
+  }
 
   try {
     const conn = await mongoose.connect(mongoUri, {
@@ -20,9 +28,11 @@ async function connectMDB() {
 
     const { name, host, port } = conn.connection;
 
-    console.log(
-      `MongoDB Connected: ${host}:${port}/${name} pid:${process.pid}`
-    );
+    if (NODE_ENV !== 'test') {
+      console.log(
+        `MongoDB Connected: ${host}:${port}/${name} pid:${process.pid}`
+      );
+    }
   } catch (error) {
     console.error('Error-at-M.Connect:');
     console.error(error);
@@ -31,4 +41,8 @@ async function connectMDB() {
   }
 }
 
-module.exports = { connectMDB };
+async function mongoDisconnect() {
+  await mongoose.disconnect();
+}
+
+module.exports = { connectMDB, mongoDisconnect };

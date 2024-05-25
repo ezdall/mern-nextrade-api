@@ -54,7 +54,7 @@ const errorHandler = (error, req, res, next) => {
     const { data, status: status2, statusText } = error.response;
 
     return res.status(status2).json({
-      error: `${status2} ${statusText} : ${data.error_description} - ${data.error}`,
+      message: `${status2} ${statusText} : ${data.error_description} - ${data.error}`,
       inner: data.error_description
     });
   }
@@ -63,7 +63,7 @@ const errorHandler = (error, req, res, next) => {
   // redundant error.name??
   if (error.name === 'UnauthorizedError') {
     return res.status(401).json({
-      error: `${error.name} : ${error.message}`,
+      message: `${error.name} : ${error.message}`,
       inner: error.inner
     });
   }
@@ -91,20 +91,20 @@ const errorHandler = (error, req, res, next) => {
 
   if (error.name === 'UrlError') {
     return res.status(404).json({
-      error: `cannot do ${req.method} on ${req.url}`
+      message: `cannot do ${req.method} on ${req.url}`
     });
   }
 
   // bad request
   if (error.statusCode === 400) {
     return res.status(400).json({
-      error: `${error.name} : ${error.message}`
+      message: `${error.name} : ${error.message}`
     });
   }
 
   if (error.statusCode === 404) {
     return res.status(404).json({
-      error: `${error.name} : ${error.message}`
+      message: `${error.name} : ${error.message}`
     });
   }
 
@@ -113,7 +113,7 @@ const errorHandler = (error, req, res, next) => {
     const uniqueVal = Object.values(error.keyValue);
 
     // console.log(getUniqueErrorMessage(error))
-    return res.status(409).json({ error: `${uniqueVal} already exist` });
+    return res.status(409).json({ message: `${uniqueVal} already exist` });
   }
 
   return res

@@ -40,9 +40,7 @@ app.use('/auth', authRoute);
 app.use('/api', [userRoute, shopRoute, productRoute, orderRoute]);
 
 app.all('*', (req, res, next) => {
-  const error = new UrlError(`${req.ip} tried to access ${req.originalUrl}`);
-
-  return next(error);
+  return next(new UrlError(`${req.ip} tried to access ${req.originalUrl}`));
 });
 
 app.use(errorHandler);

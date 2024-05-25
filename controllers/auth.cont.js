@@ -8,7 +8,6 @@ const User = require('../models/user.model');
 // helper
 const { BadRequest400 } = require('../helpers/bad-request.error');
 const { Unauthorized401 } = require('../helpers/unauthorized.error');
-const { NotFound404 } = require('../helpers/not-found.error');
 const { Forbidden403 } = require('../helpers/forbidden.error');
 
 /**
@@ -33,6 +32,8 @@ const register = async (req, res, next) => {
     // async hash
     const salt = await genSalt();
     const hashPass = await hash(password, salt);
+
+    console.log({ hashPass });
 
     const newUser = await User.create({
       ...req.body,
@@ -67,7 +68,7 @@ const login = async (req, res, next) => {
     const user = await User.findOne({ email }).exec();
 
     if (!user) {
-      return next(new NotFound404('User not found @login'));
+      return next(new Unauthorized401('User not found @login'));
     }
 
     // pass, hashed_password
@@ -125,10 +126,15 @@ const logout = async (req, res, next) => {
   try {
     const { cookies } = req;
 
-    if (!cookies?.jwt) return res.sendStatus(204); // no content
+    if (!cookies?.jwt) {
+      res.clearCookie('jwt');
+      return res.sendStatus(204); // no content
+    }
+
     // eslint-disable-next-line camelcase
     const refresh_token = cookies.jwt;
 
+    // + .lean() ?
     const user = await User.findOne({ refresh_token }).exec();
 
     if (!user) {
@@ -139,10 +145,9 @@ const logout = async (req, res, next) => {
     // clear cookie at database
     user.refresh_token = undefined;
 
-    const result = await user.save();
+    await user.save();
 
-    if (!result) return next(new BadRequest400('invalid @logout'));
-
+    // add more options
     res.clearCookie('jwt');
 
     // 204 no-content
@@ -163,7 +168,8 @@ const refresh = async (req, res, next) => {
 
   console.log({ cookieRef: cookies.jwt });
 
-  if (!cookies?.jwt) return next(new NotFound404('cookie not found! @refresh'));
+  if (!cookies?.jwt)
+    return next(new Unauthorized401('cookie not found! @refresh'));
 
   // eslint-disable-next-line camelcase
   const refresh_token = cookies.jwt;

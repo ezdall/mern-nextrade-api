@@ -11,34 +11,65 @@ const userSchema = new Schema(
     },
     email: {
       type: String,
-      trim: true,
-      minlength: 4,
-      unique: 'Email already exists',
       required: 'Email is required',
+      unique: 'Email already exists',
+      trim: true,
+      lowercase: true, // deal w/ uppercased duplicate
+      minlength: 4,
+      maxlength: 32,
+      // collation: { locale: 'en', strength: 2 },
       match: [/.+@.+\..+/, 'Please fill a valid email address']
     },
-    password: {
+    hashed_password: {
       type: String,
-      required: 'password is required'
+      required: true
     },
     salt: String,
+    refresh_token: String,
     seller: {
       type: Boolean,
       default: false
     },
-    refresh_token: String,
     stripe_seller: {},
     stripe_customer: {}
   },
   { timestamps: true, versionKey: false }
 );
 
-userSchema.path('password').validate(function validatePass() {
-  if (this.password && this.password.length < 5) {
+/**
+ *  Statics
+ */
+
+/**
+ *   Virtuals
+ */
+
+// handling 'password'
+userSchema
+  .virtual('password')
+  .set(function passVirtSet(password) {
+    this._password = password;
+  })
+  .get(function passVirtGet() {
+    return this._password;
+  });
+
+/**
+ * Paths
+ */
+
+userSchema.path('hashed_password').validate(function hashPassValidate() {
+  // at least 6, trim then checks
+  if (this._password && this._password.trim().length < 5) {
+    // invalidates the incoming 'password'
+    // Document#invalidate(<path>, <errorMsg>)
     this.invalidate('password', 'Password must be at least 5 characters.');
   }
 
-  if (this.isNew && !this.password) {
+  // Document#isNew (return boolean)
+  // dealing w/ new register/signup w/ empty password
+  if (this.isNew && !this._password) {
+    // invalidates the incoming 'password'
     this.invalidate('password', 'Password is required');
   }
 }, null);

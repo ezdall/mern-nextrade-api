@@ -31,13 +31,12 @@ const register = async (req, res, next) => {
 
     // async hash
     const salt = await genSalt();
-    const hashPass = await hash(password, salt);
-
-    console.log({ hashPass });
+    const hashedPassword = await hash(password, salt);
 
     const newUser = await User.create({
       ...req.body,
-      password: hashPass,
+      hashed_password: hashedPassword, // add hash on schmema
+      password, // handle by virtual
       salt
     });
 
@@ -72,7 +71,7 @@ const login = async (req, res, next) => {
     }
 
     // pass, hashed_password
-    const passMatch = await compare(password, user.password);
+    const passMatch = await compare(password, user.hashed_password);
 
     if (!passMatch || typeof passMatch !== 'boolean') {
       return next(new Unauthorized401('wrong password @login'));
@@ -128,7 +127,7 @@ const logout = async (req, res, next) => {
 
     if (!cookies?.jwt) {
       res.clearCookie('jwt');
-      return res.sendStatus(204); // no content
+      return res.sendStatus(204); // 204 no content
     }
 
     // eslint-disable-next-line camelcase
@@ -211,8 +210,8 @@ const refresh = async (req, res, next) => {
     refresh_token,
     process.env.REFRESH_SECRET,
     async (err, decoded) => {
-      if (err || email !== decoded.email)
-        return next(new Forbidden403('Forbidden verify2 @refresh'));
+      if (err || email !== decoded.email) return next(err);
+      // return next(new Forbidden403('Forbidden verify2 @refresh'));
 
       const accessToken = jwt.sign(
         {

@@ -52,7 +52,7 @@ const validRegister = {
 const spacePassRegister = {
   name: 'janedoe',
   email: 'janedoe@gmail.com',
-  password: '123',
+  password: '      ',
   seller: false
 };
 
@@ -203,20 +203,15 @@ describe('POST /auth/register', () => {
     expect(body.message).toMatch(`${validLogin.email} already exist`);
   });
 
-  // it('register w/ space-password, (400) error', async () => {
-  //   const { body } = await request(app)
-  //     .post('/auth/register')
-  //     .send(spacePassRegister)
-  //     .expect('Content-Type', /json/);
-  //   // .expect(400);
+  it('register w/ spaced or less-char password, (400) error', async () => {
+    const { body } = await request(app)
+      .post('/auth/register')
+      .send(spacePassRegister)
+      .expect('Content-Type', /json/)
+      .expect(400);
 
-  //   console.log({
-  //     body
-  //   });
-
-  //   expect(body.message).toMatch(/validation error/);
-  //   // expect(body.error).toMatch(/all fields required/);
-  // });
+    expect(body.message).toMatch(/ValidationError.+password/);
+  });
 });
 
 /** * * * * *    REFRESH     * *  * * */
@@ -225,6 +220,8 @@ describe('GET /refresh', () => {
   it('refresh (200)', async () => {});
 
   it('expire refresh (401)', async () => {});
+
+  it('no cookie (401)', async () => {});
 
   // it('auto-login using cookies.jwt', async () => {
   //   // const token = jwt.sign({ email: validLogin.email }, process.env.JWT_SECRET);

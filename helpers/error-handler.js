@@ -23,8 +23,19 @@ const errorHandler = (error, req, res, next) => {
     console.log('stripe error @errHand', {
       ...error
     });
+    // internal error. exclude MongoError, ValidationError
+  } else if (
+    status === 500 &&
+    ![
+      'MongoError',
+      'ValidationError',
+      'JsonWebTokenError',
+      'UnauthorizedError' // express-jwt
+    ].includes(error.name)
+  ) {
+    console.log(error.stack);
   } else {
-    // console.error('| ==--- MyErrorStack ---== |:', error.stack);
+    // consistent error logger
     console.log({ ...error });
   }
 
@@ -77,10 +88,10 @@ const errorHandler = (error, req, res, next) => {
     console.log('--ValidatorError--');
   }
 
-  // ?
+  // x.model.js
   if (error.name === 'ValidationError') {
     return res.status(400).json({
-      message: 'validation error'
+      message: `ValidationError: ${error.message}`
     });
   }
 
@@ -96,15 +107,31 @@ const errorHandler = (error, req, res, next) => {
   }
 
   // bad request
-  if (error.statusCode === 400) {
-    return res.status(400).json({
-      message: `${error.name} : ${error.message}`
-    });
-  }
+  // if (error.statusCode === 400) {
+  //   console.log('--400--');
+  //   return res.status(400).json({
+  //     message: `${error.name} : ${error.message}`
+  //   });
+  // }
 
-  if (error.statusCode === 404) {
-    return res.status(404).json({
-      message: `${error.name} : ${error.message}`
+  // not found
+  // if (error.statusCode === 404) {
+  //   console.log('--404--');
+  //   return res.status(404).json({
+  //     message: `${error.name} : ${error.message}`
+  //   });
+  // }
+
+  // unauthorized
+  // if (error.statusCode === 401) {
+  //   return res.status(401).json({
+  //     error: `${error.name} : ${error.message}`
+  //   });
+  // }
+
+  if (['TokenExpiredError', 'JsonWebTokenError'].includes(error.name)) {
+    return res.status(401).json({
+      message: error.message
     });
   }
 

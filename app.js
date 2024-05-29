@@ -37,10 +37,11 @@ app.get('^/$|/index(.html)?', (req, res) => {
 });
 
 app.use('/auth', authRoute);
+// order matters
 app.use('/api', [userRoute, shopRoute, productRoute, orderRoute]);
 
 app.all('*', (req, res, next) => {
-  return next(new UrlError(`${req.ip} tried to access ${req.originalUrl}`));
+  return next(new UrlError(`${req.ip} tried ${req.method} ${req.originalUrl}`));
 });
 
 app.use(errorHandler);

@@ -165,15 +165,13 @@ const logout = async (req, res, next) => {
 const refresh = async (req, res, next) => {
   const { cookies } = req;
 
-  console.log({ cookieRef: cookies.jwt });
+  // console.log({ cookieRef: cookies.jwt });
 
   if (!cookies?.jwt)
     return next(new Unauthorized401('cookie not found! @refresh'));
 
   // eslint-disable-next-line camelcase
   const refresh_token = cookies.jwt;
-
-  const foundUser = await User.findOne({ refresh_token }).exec();
 
   // console.log({ foundUser, refresh_token });
 
@@ -204,14 +202,18 @@ const refresh = async (req, res, next) => {
   //   );
   // }
 
-  const { _id, name, email, seller } = foundUser;
-
   return jwt.verify(
     refresh_token,
     process.env.REFRESH_SECRET,
     async (err, decoded) => {
-      if (err || email !== decoded.email) return next(err);
-      // return next(new Forbidden403('Forbidden verify2 @refresh'));
+      if (err) return next(err);
+
+      const foundUser = await User.findOne({ refresh_token }).exec();
+
+      if (!foundUser || foundUser.email !== decoded.email)
+        return next(new Forbidden403('cookie dont match'));
+
+      const { _id, name, email, seller } = foundUser;
 
       const accessToken = jwt.sign(
         {
@@ -237,7 +239,7 @@ const requireLogin = expressJwt({
 });
 
 const hasAuth = (req, res, next) => {
-  console.log({ reqProf: req.profile.email, reqAuth: req.auth.email });
+  console.log({ reqProf: req.profile, reqAuth: req.auth });
 
   const authorized =
     req.profile && req.auth && String(req.profile._id) === String(req.auth._id);

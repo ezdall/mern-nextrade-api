@@ -10,11 +10,16 @@ const {
   userById
 } = require('../controllers/user.cont');
 
+// router.use(requireLogin);
+// any route that follows, will inherit this 'requireLogin'
+// app.use('/api',[userRoute, otherRoute])
+// so position it last
+
 router.route('/users').get(list);
 
 router
   .route('/users/:userId')
-  .get(requireLogin, read)
+  .get(requireLogin, hasAuth, read)
   .patch(requireLogin, hasAuth, update)
   .delete(requireLogin, hasAuth, remove);
 

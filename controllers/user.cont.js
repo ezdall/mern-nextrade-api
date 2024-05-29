@@ -46,15 +46,12 @@ const list = async (req, res, next) => {
 const read = (req, res, next) => {
   const user = req.profile;
 
-  console.log({ user });
-
   if (!user) return next(new Unauthorized401('profile not found @user-read'));
 
   // remove sensitive data
-  user.password = undefined;
-  user.salt = undefined;
+  const { _id, name, email, seller } = user;
 
-  return res.json(user);
+  return res.json({ _id, name, email, seller });
 };
 
 const update = async (req, res, next) => {
@@ -81,8 +78,6 @@ const update = async (req, res, next) => {
       user.salt = salt;
     }
 
-    console.log({ user });
-
     const result = await user.save();
 
     // check if update successfully
@@ -94,7 +89,7 @@ const update = async (req, res, next) => {
 
     const { name, email, seller } = user;
 
-    return res.json({ name, email, seller: seller.type });
+    return res.json({ name, email, seller });
   } catch (error) {
     return next(error);
   }
@@ -122,11 +117,12 @@ const remove = async (req, res, next) => {
 
     // remove
     // deletedUser.password = undefined;
-    //    deletedUser.salt = undefined;
+    // deletedUser.salt = undefined;
 
     const { name, email, seller } = deletedUser;
 
-    return res.json({ name, email, seller: seller.type });
+    // return res.json({ name, email, seller });
+    return res.json({ message: `${email} is deleted` });
   } catch (error) {
     return next(error);
   }
@@ -136,13 +132,13 @@ const userById = async (req, res, next, userId) => {
   try {
     // Validate the userId
     if (!userId || !mongoose.isValidObjectId(userId)) {
-      return next(new Unauthorized401('valid id is required @userById'));
+      return next(new Unauthorized401('invalid id @userById'));
     }
 
     // Find the user by ID
     const user = await User.findById(userId).exec();
 
-    // Check if the user exists
+    // should this be not-found-404??
     if (!user) return next(new Unauthorized401('User not found @userById'));
 
     // Attach the user to req.profile
@@ -156,14 +152,14 @@ const userById = async (req, res, next, userId) => {
 
 // need transfer?
 const isSeller = (req, res, next) => {
-  const { profile } = req;
+  // const { profile } = req;
 
   // check if user is a seller
-  if (profile?.seller === true) return next();
+  if (req.profile?.seller === true) return next();
 
   // else return 403
   return next(
-    new Forbidden403(`${profile?.name || 'User'} is not a seller @isSeller`)
+    new Forbidden403(`${req.profile?.name || 'User'} is not a seller @isSeller`)
   );
 };
 

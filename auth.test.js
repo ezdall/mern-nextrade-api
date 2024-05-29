@@ -61,7 +61,7 @@ const invalidRegister = {};
 const lackPassRegister = {};
 
 let token;
-let refreshToken;
+let refreshTokenFull;
 
 beforeAll(async () => {
   await connectMDB();
@@ -102,14 +102,16 @@ describe('POST /auth/login', () => {
       user: expect.any(Object)
     });
 
-    // assign
+    // assign access, refresh token
     token = body.accessToken;
+
+    [refreshTokenFull] = headers['set-cookie'][0].split(';');
 
     // check user
     expect(body.user).toMatchObject({
       name: validLogin.name,
       email: validLogin.email,
-      seller: validLogin.seller,
+      seller: Boolean(validLogin.seller),
       _id: expect.any(String)
     });
 
@@ -217,43 +219,60 @@ describe('POST /auth/register', () => {
 /** * * * * *    REFRESH     * *  * * */
 
 describe('GET /refresh', () => {
-  it('refresh (200)', async () => {});
+  it('refresh (200)', async () => {
+    const { body } = await request(app)
+      .get('/auth/refresh')
+      .set('Cookie', [`${refreshTokenFull}`])
+      .expect('Content-Type', /json/)
+      .expect(200);
+
+    // accessToken, user
+    expect(body).toMatchObject({
+      accessToken: expect.any(String),
+      user: expect.any(Object)
+    });
+
+    // not same w/ prev token
+    expect(body.accessToken).not.toBe(token);
+
+    // check user
+    expect(body.user).toMatchObject({
+      email: validLogin.email,
+      seller: Boolean(validLogin.seller),
+      _id: expect.any(String)
+    });
+
+    // no password related
+    expect(body.user).not.toHaveProperty('password');
+    expect(body.user).not.toHaveProperty('salt');
+    expect(body.user).not.toHaveProperty('hashed_password');
+  });
+
+  it('invalid cookie token', async () => {
+    const { body } = await request(app)
+      .get('/auth/refresh')
+      .set('Cookie', ['jwt=in.Valid.Token'])
+      .expect('Content-Type', /json/)
+      .expect(401);
+
+    expect(body.message).toMatch(/invalid token/);
+  });
+
+  it('valid token but by others 403', async () => {
+    const otherRefreshToken = jwt.sign(
+      { username: validLogin.username },
+      process.env.REFRESH_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const { body } = await request(app)
+      .get('/auth/refresh')
+      .set('Cookie', [`jwt=${otherRefreshToken}`])
+      .expect('Content-Type', /json/)
+      .expect(403);
+
+    expect(body.message).toMatch(/cookie dont match/);
+  });
 
   it('expire refresh (401)', async () => {});
-
-  it('no cookie (401)', async () => {});
-
-  // it('auto-login using cookies.jwt', async () => {
-  //   // const token = jwt.sign({ email: validLogin.email }, process.env.JWT_SECRET);
-
-  //   const { body } = await request(app)
-  //     .post('/auth/login')
-  //     .set('Authorization', `Bearer ${token}`)
-  //     .expect('Content-Type', /json/) // regex json
-  //     .expect(200);
-
-  //   expect(body).toHaveProperty('user');
-
-  //   expect(body.user).toMatchObject({ email: validLogin.email });
-  //   expect(body.user).toHaveProperty('_id');
-
-  //   // no password related
-  //   expect(body.user).not.toHaveProperty('password');
-  //   expect(body.user).not.toHaveProperty('salt');
-  //   expect(body.user).not.toHaveProperty('hashed_password');
-  // });
-
-  //   it('auto-login invalid token (401)', async () => {
-  //     const invalidToken = 'the.invalid.token';
-
-  //     const { body } = await request(app)
-  //       .post('/signin')
-  //       .set('Authorization', `Bearer ${invalidToken}`)
-  //       .expect('Content-Type', /json/) // regex json
-  //       .expect(401);
-
-  //     expect(body).toHaveProperty('error');
-
-  //     expect(body.error).toMatch(/(jwt|token|signature)/);
-  //   });
 });

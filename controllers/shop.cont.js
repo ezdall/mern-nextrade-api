@@ -78,12 +78,13 @@ const create = (req, res, next) => {
       return next(new BadRequest400(`Error parsing form data: ${err.message}`));
       // return next(err);
     }
-    console.log({ files }); // img
-    console.log({ fields }); // name, doc
+    console.log({ fields, files }); // name, doc, img
 
     try {
       // create a new shop using form fields
       const shop = new Shop(fields);
+      // is redundant, is this populated?
+      // ans: no, bcoz it uses :userId
       shop.owner = req.profile._id;
 
       // process image file if provided
@@ -113,9 +114,13 @@ const create = (req, res, next) => {
         return next(new BadRequest400('Failed to create @crtShop'));
       }
 
-      result.image.data = undefined; // remove during dev only?
+      const { _id, name, description, owner, image } = result;
 
-      return res.status(201).json(result);
+      if (process.env.NODE_ENV !== 'production') {
+        image.data = undefined; // remove during dev/test only
+      }
+
+      return res.status(201).json({ _id, name, description, owner, image });
     } catch (error) {
       return next(error);
     }
@@ -124,7 +129,11 @@ const create = (req, res, next) => {
 
 const update = (req, res, next) => {
   if (!req.is('multipart/form-data'))
-    return next(new BadRequest400('invalid form'));
+    return next(
+      new BadRequest400(
+        'Invalid form type. Only "multipart/form-data" is allowed.'
+      )
+    );
 
   const form = new IncomingForm({
     keepExtensions: true,
@@ -158,7 +167,13 @@ const update = (req, res, next) => {
         return next(new BadRequest400('Failed to update @crtShop'));
       }
 
-      return res.json(result);
+      const { _id, name, description, owner, image } = result;
+
+      if (process.env.NODE_ENV !== 'production') {
+        image.data = undefined; // remove during dev/test only
+      }
+
+      return res.json({ _id, name, description, owner, image });
     } catch (error) {
       return next(error);
     }
@@ -187,7 +202,9 @@ const remove = async (req, res, next) => {
       return next(new NotFound404('Failed to delete @delShop'));
     }
 
-    return res.json(deletedShop);
+    const { _id, name, owner } = deletedShop;
+
+    return res.json({ _id, name, owner });
   } catch (err) {
     return next(err);
   }
@@ -196,9 +213,8 @@ const remove = async (req, res, next) => {
 const isOwner = (req, res, next) => {
   const { shop, auth } = req;
 
-  // const wasOwner = shop && auth && String(shop.owner?._id) === String(auth._id);
-
-  // Verify that shop and auth exist and that the shop owner matches the authenticated user
+  // Verify if the shop owner matches the authenticated user
+  // similar to hasAuth
   const userIsOwner = shop?.owner?._id.toString() === auth?._id.toString();
 
   if (!userIsOwner) {
@@ -223,8 +239,6 @@ const shopById = async (req, res, next, shopId) => {
       .populate({ path: 'owner', select: 'name ' }) // for client
       .exec();
 
-    console.log({ shop });
-
     if (!shop) return next(new Unauthorized401('Shop not found'));
 
     // attach
@@ -239,8 +253,6 @@ const shopById = async (req, res, next, shopId) => {
 
 const photo = (req, res, next) => {
   const { shop } = req;
-
-  // console.log({shop})
 
   // must check if shop exist and has image data
   if (shop?.image?.data) {

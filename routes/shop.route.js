@@ -30,8 +30,8 @@ router.get('/shops/defaultphoto', defaultPhoto);
 
 router
   .route('/shops/:shopId')
-  .patch(requireLogin, hasAuth, isOwner, update) // this will be error
-  .delete(requireLogin, hasAuth, isOwner, remove); // hasAuth?, error
+  .patch(requireLogin, isOwner, update) // this will be error
+  .delete(requireLogin, isOwner, remove); // isOwner instead of hasAuth
 
 router.param('userId', userById);
 router.param('shopId', shopById);

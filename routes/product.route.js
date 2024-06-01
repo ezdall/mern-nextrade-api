@@ -32,7 +32,7 @@ router.route('/products').get(list); // list w/ Query
 
 router.route('/product/image/:productId').get(photo, defaultPhoto);
 
-router.route('products/defaultphoto').get(defaultPhoto);
+router.route('/products/defaultphoto').get(defaultPhoto);
 
 router.route('/product/:productId').get(read);
 

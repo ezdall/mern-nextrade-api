@@ -54,7 +54,11 @@ const { NotFound404 } = require('../helpers/not-found.error');
 
 const create = async (req, res, next) => {
   if (!req.is('multipart/form-data')) {
-    return next(new BadRequest400('invalid form @createProd'));
+    return next(
+      new BadRequest400(
+        'Invalid form type. Only "multipart/form-data" is allowed. @crtProd'
+      )
+    );
   }
 
   const form = new IncomingForm({
@@ -85,6 +89,8 @@ const create = async (req, res, next) => {
       if (!result) {
         return next(new BadRequest400('invalid product @createProd'));
       }
+
+      result.image.data = undefined;
 
       return res.status(201).json(result);
     } catch (error) {
@@ -164,7 +170,8 @@ const update = (req, res, next) => {
         return next(new BadRequest400('invalid update @updProd'));
       }
 
-      console.log({ result });
+      result.image.data = undefined;
+
       return res.json(result);
     } catch (error) {
       return next(error);
@@ -181,8 +188,13 @@ const remove = async (req, res, next) => {
 
     const deletedProduct = await prod.deleteOne();
 
-    console.log('delete success');
-    return res.json(deletedProduct);
+    if (!deletedProduct) {
+      return next(new Unauthorized401('Failed to delete @delProd'));
+    }
+
+    const { _id, name, price, quantity, category, shop } = deletedProduct;
+
+    return res.json({ _id, name, price, quantity, category, shop });
   } catch (err) {
     return next(err);
   }
@@ -325,8 +337,10 @@ const defaultPhoto = (req, res, next) => {
 
 const decreaseQuantity = async (req, res, next) => {
   try {
+    //  no qty check??
+
     if (!req?.body?.order?.products) {
-      return next(new BadRequest400('Invalid request format @ prod-decrease'));
+      return next(new BadRequest400('Invalid request format @dec-prod-qty'));
     }
 
     const bulkOps = req.body.order.products.map(item => {
@@ -343,6 +357,9 @@ const decreaseQuantity = async (req, res, next) => {
     if (!result) {
       return next(new BadRequest400('invalid update @ prod-decrease'));
     }
+
+    console.log('decrease-quantity');
+
     return next();
   } catch (error) {
     return next(error);
@@ -352,9 +369,7 @@ const decreaseQuantity = async (req, res, next) => {
 const increaseQuantity = async (req, res, next) => {
   try {
     if (!req?.body?.quantity) {
-      return next(
-        new BadRequest400('Invalid product or quantity provided @prod-inc')
-      );
+      return next(new BadRequest400('Invalid quantity provided @inc-prod-qty'));
     }
 
     await Product.findByIdAndUpdate(
@@ -364,6 +379,8 @@ const increaseQuantity = async (req, res, next) => {
     ).exec();
 
     // no checking
+
+    console.log('increase-quantity');
 
     return next();
   } catch (err) {

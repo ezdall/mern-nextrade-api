@@ -51,7 +51,14 @@ const update = async (req, res, next) => {
       );
     }
 
+    const beforeUpd = await Order.findOne({
+      'products._id': cartItemId
+    }).exec();
+
+    console.log({ beforeUpd });
+
     // using updateOne
+    // { n:0, nModified: 0, ok: 1 },, coz .updateOne()
     const order = await Order.updateOne(
       {
         'products._id': cartItemId
@@ -61,9 +68,13 @@ const update = async (req, res, next) => {
       }
     );
 
-    if (!order) return next(new BadRequest400('invalid update @ordUpdStat'));
+    if (!order.ok) return next(new BadRequest400('invalid update @ordUpdStat'));
 
-    console.log(status);
+    const afterUpd = await Order.findOne({ 'products._id': cartItemId }).exec();
+
+    console.log({ afterUpd });
+
+    // console.log(status);
     return res.json(order);
   } catch (error) {
     return next(error);
@@ -119,7 +130,7 @@ const orderById = async (req, res, next, orderId) => {
 
     if (!order) return next(new Unauthorized401('order not found @orderById'));
 
-    console.log({ order: order.products, shop: order.products[0].shop });
+    // console.log({ order: order.products, shop: order.products[0].shop });
 
     req.order = order;
 

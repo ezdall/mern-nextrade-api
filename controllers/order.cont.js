@@ -45,36 +45,35 @@ const update = async (req, res, next) => {
   try {
     const { cartItemId, status } = req.body;
 
+    // console.log({ cartItemId, status });
+
     if (!cartItemId || !status) {
       return next(
         new BadRequest400('need valid status or id @order-status-update')
       );
     }
 
-    const beforeUpd = await Order.findOne({
-      'products._id': cartItemId
-    }).exec();
-
-    console.log({ beforeUpd });
-
     // using updateOne
-    // { n:0, nModified: 0, ok: 1 },, coz .updateOne()
+    // { n:1, nModified: 1, ok: 1 },, coz .updateOne()
     const order = await Order.updateOne(
       {
-        'products._id': cartItemId
+        // 'products._id': cartItemId // not match
+        // rename product to cart?
+        'products.product': cartItemId
       },
       {
-        'products.$.status': status
+        'products.$.status': status // .$.? array
       }
     );
 
     if (!order.ok) return next(new BadRequest400('invalid update @ordUpdStat'));
 
-    const afterUpd = await Order.findOne({ 'products._id': cartItemId }).exec();
+    const result = await Order.findOne({
+      'products.product': cartItemId
+    }).exec();
 
-    console.log({ afterUpd });
+    // console.log({ result });
 
-    // console.log(status);
     return res.json(order);
   } catch (error) {
     return next(error);

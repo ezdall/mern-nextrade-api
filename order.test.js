@@ -63,11 +63,11 @@ const cartData = {
   cartItemId: ''
 };
 
+const orderQty = 2;
+
 const orderProcessing = {};
 
 const orderCancel = {};
-
-'Not processed', 'Processing', 'Shipped', 'Delivered', 'Cancelled';
 
 let accessToken;
 let accessToken2;
@@ -115,7 +115,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // await mongoose.connection.dropCollection('orders');
+  await mongoose.connection.dropCollection('orders');
   await mongoose.connection.dropCollection('products');
   await mongoose.connection.dropCollection('shops');
   await mongoose.connection.dropCollection('users');
@@ -144,13 +144,14 @@ describe('POST create order', () => {
           products: [
             {
               product,
-              quantity: 1
+              quantity: orderQty
             }
           ]
         },
         token: 'tok_visa'
         // token: 'tok_1G1bkmASmyFkWeQblrvOvE06' // ex. expired
       })
+      .expect('Content-Type', /json/)
       .expect(201);
 
     expect(body).toMatchObject({
@@ -160,22 +161,31 @@ describe('POST create order', () => {
         {
           _id: expect.any(String),
           product: product._id,
-          quantity: 1,
+          quantity: orderQty,
           status: expect.any(String)
         }
       ],
       user: user._id,
-      payment_id: expect.stringMatching(/cus_/) // .toMatch() ?
+      payment_id: expect.stringMatching(/cus_/) // need inet
     });
 
     order = body;
   });
 
+  it('prod qty dec after order', async () => {
+    const { body } = await request(app)
+      .get(`/api/product/${product._id}`)
+      .expect('Content-Type', /json/)
+      .expect(200);
+
+    console.log({ body });
+
+    expect(body.quantity).toBe(prodData.quantity - orderQty);
+  });
+
   it('no bearer token', async () => {});
 
   it('no stripe?', async () => {});
-
-  // it('is decrese?')
 
   // it('not owner', async () => {});
 
@@ -249,13 +259,11 @@ describe('INC, DEC, CHARGE', () => {
     const { body } = await request(app)
       .patch(`/api/order/status/${shop._id}`)
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ cartItemId: product._id, status: 'Cancelled' })
+      .send({ cartItemId: product._id, status: 'Processing' })
       .expect(200);
 
-    console.log({ body });
-
     expect(body).toMatchObject({
-      n: 0,
+      n: 1,
       nModified: 1, // must be 1
       ok: 1
     });
@@ -270,16 +278,23 @@ describe('INC, DEC, CHARGE', () => {
       .send({
         cartItemId: product._id,
         status: 'Cancelled',
-        quantity: 1
+        quantity: orderQty // return what you dec
       });
 
-    console.log({ body });
-
     expect(body).toMatchObject({
-      n: 0,
-      nModified: 1, // must be 1?
+      n: 1,
+      nModified: 1, // must be 1
       ok: 1
     });
+  });
+
+  it('prod qty after cancel', async () => {
+    const { body } = await request(app)
+      .get(`/api/product/${product._id}`)
+      .expect('Content-Type', /json/)
+      .expect(200);
+
+    expect(body.quantity).toBe(prodData.quantity);
   });
 
   // // .patch(requireLogin, isOwner, createCharge, update);

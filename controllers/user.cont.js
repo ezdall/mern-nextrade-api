@@ -171,6 +171,8 @@ const isSeller = (req, res, next) => {
 
 const stripeAuth = async (req, res, next) => {
   try {
+    // console.log({ stripe: req.body });
+
     if (!req?.body?.stripe) return next(new NotFound404('no stripe'));
 
     const response = await axios.post(stripeUrl, {
@@ -179,12 +181,16 @@ const stripeAuth = async (req, res, next) => {
       grant_type: 'authorization_code'
     });
 
+    // console.log({ response });
+
     if (!response) {
       return next(new BadRequest400('stripe auth error'));
     }
 
     // eslint-disable-next-line require-atomic-updates
     req.body.stripe_seller = response.data;
+
+    // console.log({ data: response.data });
 
     return next();
   } catch (error) {
@@ -249,6 +255,7 @@ const stripeCustomer = (req, res, next) => {
 
           return next();
         } catch (error) {
+          console.log({ err: error });
           return next(error);
         }
       });
@@ -258,21 +265,44 @@ const stripeCustomer = (req, res, next) => {
 const createCharge = (req, res, next) => {
   console.log('createCharge');
 
+  //  check amount
+  // console.log({
+  //   payId: req.order,
+  //   prof: req.profile
+  // });
+
   if (!req.order?.payment_id) {
-    return next(new NotFound404('no payment id @crtCharge'));
+    return next(new Unauthorized401('no payment id @crtCharge'));
   }
   if (!req.profile?.stripe_seller) {
-    return next(new BadRequest400('Please connect your Stripe account'));
+    return next(new Unauthorized401('Please connect your Stripe account'));
   }
+
+  // console.log({
+  //   stripeUser: req.profile.stripe_seller.stripe_user_id
+  // });
 
   // create toke for customer
   return myStripe.tokens
     .create(
       { customer: req.order.payment_id },
-      { stripeAuth: req.profile.stripe_seller.stripe_user_id }
+      { stripeAccount: req.profile.stripe_seller.stripe_user_id }
+      // stripeAuth?
     )
 
     .then(token => {
+      // console.log({ token });
+
+      //  {
+      //   token: {
+      //     id: 'tok_1PRCOMHim3TH6gZAdWotlnC7',
+      //     object: 'token',
+      //     card:{
+      //       id: 'card_1PRCOMHim3TH6gZA51wkuDZO'
+      //     }
+      //   }
+      // }
+
       myStripe.charges
         .create(
           {
@@ -281,10 +311,30 @@ const createCharge = (req, res, next) => {
             source: token.id
           },
           {
-            stripeAuth: req.profile.stripe_seller.stripe_user_id
+            stripeAccount: req.profile.stripe_seller.stripe_user_id
+            // stripeAuth?
           }
         )
         .then(charge => {
+          // console.log({ charge });
+
+          // {
+          //   charge: {
+          //     id: 'ch_3PRCONHim3TH6gZA14hiDwmR',
+          //     amount: 4000,
+          //     application: 'ca_MojTHRgz7K5jdTHM5P7RX5C4LNVUaM1W',
+          //     balance_transaction: 'txn_3PRCONHim3TH6gZA11aATym7',
+          //     paid: true,
+          //     payment_method: 'card_1PRCOMHim3TH6gZA51wkuDZO',
+          //     payment_method_details: { card: [Object], type: 'card' },
+          //     receipt_url:
+          //       'https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xUFFsb1dIaW0zVEg2Z1pBKNTAq7MGMgZl32Or_sc6LBa3bwO8DmNN7FIt99QwNMXGWeFSA7k1BzC1bE_S10XKq1T7PT8OqjDt32n1',
+          //     source: {
+          //       id: 'card_1PRCOMHim3TH6gZA51wkuDZO'
+          //     }
+          //   }
+          // };
+
           const {
             billing_details,
             outcome,
@@ -292,6 +342,7 @@ const createCharge = (req, res, next) => {
             payment_method_details,
             receipt_url
           } = charge;
+
           console.log({
             address: billing_details.address,
             seller_message: outcome.seller_message,

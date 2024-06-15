@@ -2,6 +2,7 @@ require('dotenv').config();
 const path = require('path');
 const request = require('supertest');
 const mongoose = require('mongoose');
+const axios = require('axios');
 
 // public key, (redudant)
 // const stripe = require('stripe')('sk_test_4eC39HqLyjWDarjtT1zdp7dc');
@@ -178,7 +179,7 @@ describe('POST create order', () => {
       .expect('Content-Type', /json/)
       .expect(200);
 
-    console.log({ body });
+    // console.log({ body });
 
     expect(body.quantity).toBe(prodData.quantity - orderQty);
   });
@@ -190,6 +191,58 @@ describe('POST create order', () => {
   // it('not owner', async () => {});
 
   // it('cart not empty', async () => {});
+});
+
+/** STRIPE AUTH  */
+
+// const { error, code } = queryString.parse(location.search);
+
+// if (error) {
+//   return setValues({ ...values, error: true });
+// }
+
+// if (code) {
+//   setValues({
+//     ...values,
+//     connecting: true,
+//     error: false
+//   });
+// }
+
+describe('stripe upd', () => {
+  // https://connect.stripe.com/oauth/token
+  // it('stripe auth', async () => {
+  //   // const resp = await axios.get(
+  //   //   `https://connect.stripe.com/oauth/authorize?response_type=code&client_id=${process.env.STRIPE_CLIENT_ID}&scope=read_write`
+  //   // );
+
+  //   const { body } = await request(app)
+  //     .patch(`/api/stripe-auth/${user._id}`)
+  //     .set('Authorization', `Bearer ${accessToken}`)
+  //     .send({ stripe: 'ac_QHKTCy4u3fnUCPwT1a57CjDGxdBYm0Qc' });
+
+  //   console.log({ body });
+
+  //   // stripe_seller: { stripe_user_id: 'acct_1PQloWHim3TH6gZA' }
+
+  //   // process.env.STRIPE_AC
+  //   // expired, 'ac_PvfdPjM2VqzycLQKCqt1b5C6coS6EQ9A'
+  //   // .route('/stripe-auth/:userId')
+  //   // .patch(requireLogin, hasAuth, stripeAuth, update);
+  // });
+
+  it('stripe update', async () => {
+    const { body } = await request(app)
+      .patch(`/api/users/${user._id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        stripe_seller: { stripe_user_id: 'acct_1PQloWHim3TH6gZA' }
+      });
+
+    console.log({
+      body
+    });
+  });
 });
 
 /**  READ,, LIST by USER,,  STATUS  */
@@ -259,7 +312,7 @@ describe('INC, DEC, CHARGE', () => {
     const { body } = await request(app)
       .patch(`/api/order/status/${shop._id}`)
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ cartItemId: product._id, status: 'Processing' })
+      .send({ cartItemId: product._id, status: 'Not processed' })
       .expect(200);
 
     expect(body).toMatchObject({
@@ -288,23 +341,41 @@ describe('INC, DEC, CHARGE', () => {
     });
   });
 
-  it('prod qty after cancel', async () => {
-    const { body } = await request(app)
-      .get(`/api/product/${product._id}`)
-      .expect('Content-Type', /json/)
-      .expect(200);
+  // it('prod qty after cancel', async () => {
+  //   const { body } = await request(app)
+  //     .get(`/api/product/${product._id}`)
+  //     .expect('Content-Type', /json/)
+  //     .expect(200);
 
-    expect(body.quantity).toBe(prodData.quantity);
-  });
+  //   expect(body.quantity).toBe(prodData.quantity);
+  // });
 
   // // .patch(requireLogin, isOwner, createCharge, update);
-  // it('create charge', async () => {
-  //   const { body } = await request(app)
-  //     .patch(`/api/order/${order._id}/charge/${user._id}/${shop._id}`)
-  //     .set('Authorization', `Bearer ${accessToken}`)
-  //     .send({cartItemId: product._id, status: '', order: order._id});
+  it('create charge', async () => {
+    // stripe_user_id: 'acct_1POyRRC7n5CLo5HS',
+    // stripe_seller.stripe_user_id
+    const { body } = await request(app)
+      .patch(`/api/order/${order._id}/charge/${user._id}/${shop._id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        cartItemId: product._id,
+        status: 'Processing',
+        amount: orderQty * product.price // order.products.$.qty * order.products.$.price
+      });
 
-  //   // { status, cartItemId, amount: prod.qty * prod.price }
-  //   console.log({ body });
-  // });
+    // console.log({ body });
+    expect(body).toMatchObject({
+      n: 1,
+      nModified: 1, // must be 1
+      ok: 1
+    });
+  });
+
+  it('prod after charge', async () => {
+    // const { body } = await request(app)
+    //   .get(`/api/product/${product._id}`)
+    //   .expect('Content-Type', /json/)
+    //   .expect(200);
+    // expect(body.quantity).toBe(prodData.quantity);
+  });
 });

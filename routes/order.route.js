@@ -47,14 +47,17 @@ router.get('/order/status-val', getStatusValues);
 
 router.get('/order/:orderId', read);
 
+// cancel
 router
   .route('/order/:shopId/cancel/:productId')
   .patch(requireLogin, isOwner, increaseQuantity, update);
 
+// process change
 router
   .route('/order/:orderId/charge/:userId/:shopId')
   .patch(requireLogin, isOwner, createCharge, update);
 
+// upd status
 router.route('/order/status/:shopId').patch(requireLogin, isOwner, update);
 
 router.param('userId', userById);

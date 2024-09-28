@@ -244,7 +244,7 @@ const listLatest = async (req, res, next) => {
   try {
     const products = await Product.find({})
       .populate({ path: 'shop', select: 'name' })
-      .sort({ createdAt: 'desc' }) // OR '-createdAt' ?
+      .sort({ createdAt: 'desc' }) // OR '-createdAt'
       .limit(4)
       .lean()
       .exec();
@@ -372,15 +372,24 @@ const increaseQuantity = async (req, res, next) => {
       return next(new BadRequest400('Invalid quantity provided @inc-prod-qty'));
     }
 
-    await Product.findByIdAndUpdate(
+    // console.log({
+    //   prodId: req.product._id,
+    //   qty: req.body.quantity,
+    //   type: typeof req.body.quantity
+    // });
+
+    const result = await Product.findByIdAndUpdate(
       req.product._id,
-      { $inc: { quantity: req.body.quantity } },
+      { $inc: { quantity: req.body.quantity } }, // add like +=
       { new: true }
     ).exec();
 
     // no checking
 
     console.log('increase-quantity');
+    // console.log({
+    //   result
+    // });
 
     return next();
   } catch (err) {

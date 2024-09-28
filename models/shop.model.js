@@ -9,7 +9,8 @@ const shopSchema = new Schema(
     },
     description: {
       type: String,
-      trim: true
+      trim: true,
+      maxlength: 200
     },
     image: {
       data: Buffer,

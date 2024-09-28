@@ -28,9 +28,10 @@
     "arrow-body-style": "off",
     "no-underscore-dangle": "off",
     "no-console": "off",
+    "camelcase": "off",
     // jest
     "jest/no-disabled-tests": "warn",
-    "jest/no-focused-tests": "error",
+    // "jest/no-focused-tests": "error",
     "jest/no-identical-title": "error",
     "jest/prefer-to-have-length": "error",
     "jest/valid-expect": "error"

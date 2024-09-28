@@ -17,12 +17,12 @@ const { NotFound404 } = require('../helpers/not-found.error');
 const list = async (req, res, next) => {
   try {
     const shops = await Shop.find()
-      .select('-image') // for dev
+      .select('-image') // during dev
       .populate({ path: 'owner', select: 'name' }) // for dev
       .lean()
       .exec();
 
-    if (!shops) return next(new NotFound404('error shops @list-shop'));
+    if (!shops) return next(new BadRequest400('error shops @list-shop'));
 
     return res.json(shops);
   } catch (error) {
@@ -33,7 +33,7 @@ const list = async (req, res, next) => {
 const listByOwner = async (req, res, next) => {
   try {
     if (!req.profile)
-      return next(new NotFound404('no profile @shop-listByOwner'));
+      return next(new Unauthorized401('no profile @shop-listByOwner'));
 
     const shops = await Shop.find({ owner: req.profile._id })
       .select('-image.data')
@@ -41,7 +41,7 @@ const listByOwner = async (req, res, next) => {
       .lean()
       .exec();
 
-    if (!shops) return next(new NotFound404('err shops @list-by-owner'));
+    if (!shops) return next(new BadRequest400('err shops @list-by-owner'));
 
     return res.json(shops);
   } catch (error) {
@@ -50,7 +50,7 @@ const listByOwner = async (req, res, next) => {
 };
 
 const read = (req, res, next) => {
-  if (!req?.shop) return next(new NotFound404('no req.shop @readShop'));
+  if (!req?.shop) return next(new Unauthorized401('no req.shop @readShop'));
 
   req.shop.image = undefined;
 
@@ -199,7 +199,7 @@ const remove = async (req, res, next) => {
     const deletedShop = await shop.deleteOne();
 
     if (!deletedShop) {
-      return next(new NotFound404('Failed to delete @delShop'));
+      return next(new Unauthorized401('Failed to delete @delShop'));
     }
 
     const { _id, name, owner } = deletedShop;
@@ -213,9 +213,11 @@ const remove = async (req, res, next) => {
 const isOwner = (req, res, next) => {
   const { shop, auth } = req;
 
-  // Verify if the shop owner matches the authenticated user
+  // const wasOwner = shop && auth && shop?.owner?._id.toString() === auth?._id.toString();
+
+  // Verify if the shop and auth exist and shop owner matches the authenticated user
   // similar to hasAuth
-  const userIsOwner = shop?.owner?._id.toString() === auth?._id.toString();
+  const userIsOwner = String(shop?.owner?._id) === String(auth?._id);
 
   if (!userIsOwner) {
     return next(

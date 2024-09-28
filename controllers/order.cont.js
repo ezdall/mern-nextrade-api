@@ -88,7 +88,7 @@ const listByShop = async (req, res, next) => {
     const orders = await Order.find({ 'products.shop': req.shop._id })
       // pop prod
       .populate({ path: 'products.product', select: 'name price' })
-      .sort('-createdAt') // latest?
+      .sort('-createdAt') // latest
       .lean()
       .exec();
 

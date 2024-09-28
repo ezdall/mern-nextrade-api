@@ -24,9 +24,10 @@ const productSchema = new Schema(
     description: {
       type: String,
       trim: true,
-      maxlength: 100
+      maxlength: 200
     },
     category: {
+      // this must be array?
       type: String,
       trim: true
     },

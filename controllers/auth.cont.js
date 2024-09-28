@@ -26,11 +26,12 @@ const register = async (req, res, next) => {
       !password ||
       (seller && typeof seller !== 'boolean')
     ) {
+      // seller.type?
       return next(new BadRequest400('valid fields are required @register'));
     }
 
     // async hash
-    const salt = await genSalt();
+    const salt = await genSalt(10); // 0
     const hashedPassword = await hash(password, salt);
 
     const newUser = await User.create({
@@ -239,7 +240,7 @@ const requireLogin = expressJwt({
 });
 
 const hasAuth = (req, res, next) => {
-  console.log({ reqProf: req.profile, reqAuth: req.auth });
+  // console.log({ reqProf: req.profile.email, reqAuth: req.auth.email });
 
   const authorized =
     req.profile && req.auth && String(req.profile._id) === String(req.auth._id);

@@ -15,7 +15,6 @@ const errorHandler = (error, req, res, next) => {
   if (error.reason) {
     console.error('| ==-- Error-Reason --== |:', errorReason);
   } else if (error.isAxiosError) {
-    console.log('axios error @errHand');
     console.log(error.response.data);
   }
   // for stripe
@@ -27,13 +26,15 @@ const errorHandler = (error, req, res, next) => {
   } else if (
     status === 500 &&
     ![
+      'AxiosError',
       'MongoError',
       'ValidationError',
       'JsonWebTokenError',
       'UnauthorizedError' // express-jwt
     ].includes(error.name)
   ) {
-    console.log(error.stack);
+    // console.log(error.stack);
+    console.log({ ...error });
   } else {
     // consistent error logger
     console.log({ ...error });
